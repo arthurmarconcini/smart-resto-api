@@ -1,7 +1,8 @@
 
 import * as productsRepository from "./products.repository.js";
-import type { Prisma } from "../../generated/prisma/client/index.js";
+
 import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "@prisma/client";
 
 export async function createProduct(data: Prisma.ProductCreateInput) {
   if (data.costPrice && data.company?.connect?.id) {
