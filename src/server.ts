@@ -20,6 +20,9 @@ app.register(companiesRoutes, { prefix: '/companies' })
 app.register(categoriesRoutes, { prefix: '/categories' })
 
 
-app.listen({ port: 3333 }).then(() => {
-  console.log('🚀 HTTP server running on http://localhost:3333');
+app.listen({ 
+  port: Number(process.env.PORT) || 3333, 
+  host: '0.0.0.0' // OBRIGATÓRIO para deploy em nuvem
+}).then(() => {
+  console.log('🚀 HTTP server running!');
 });
