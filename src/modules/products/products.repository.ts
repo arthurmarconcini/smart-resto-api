@@ -1,6 +1,6 @@
 
-import { prisma } from "../../lib/prisma";
-import type { Prisma } from "../../generated/prisma/client";
+import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "../../generated/prisma/client/index.js";
 
 export async function create(data: Prisma.ProductCreateInput) {
   return prisma.product.create({

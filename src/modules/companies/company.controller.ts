@@ -1,7 +1,7 @@
 
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import * as companiesService from './company.service';
-import type { CreateCompanyInput } from './company.schemas';
+import * as companiesService from './company.service.js';
+import type { CreateCompanyInput } from './company.schemas.js';
 
 export async function createCompany(req: FastifyRequest<{ Body: CreateCompanyInput }>, reply: FastifyReply) {
   try {

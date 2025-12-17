@@ -1,7 +1,7 @@
 
 import type { FastifyReply, FastifyRequest } from "fastify";
-import * as categoriesService from "./categories.service";
-import type { CreateCategoryInput } from "./categories.schemas";
+import * as categoriesService from "./categories.service.js";
+import type { CreateCategoryInput } from "./categories.schemas.js";
 
 export async function createCategory(req: FastifyRequest<{ Body: CreateCategoryInput }>, reply: FastifyReply) {
   try {

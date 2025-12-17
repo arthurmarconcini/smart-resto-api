@@ -1,8 +1,8 @@
 
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import * as categoriesController from "./categories.controller";
-import { createCategorySchema } from "./categories.schemas";
+import * as categoriesController from "./categories.controller.js";
+import { createCategorySchema } from "./categories.schemas.js";
 
 export async function categoriesRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();

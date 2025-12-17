@@ -1,7 +1,7 @@
 
 import type { FastifyReply, FastifyRequest } from "fastify";
-import * as productsService from "./products.service";
-import type { CreateProductInput, UpdateProductInput } from "./products.schemas";
+import * as productsService from "./products.service.js";
+import type { CreateProductInput, UpdateProductInput } from "./products.schemas.js";
 
 export async function createProduct(req: FastifyRequest<{ Body: CreateProductInput }>, reply: FastifyReply) {
   try {

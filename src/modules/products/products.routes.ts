@@ -1,8 +1,8 @@
 
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import * as productsController from "./products.controller";
-import { createProductSchema, updateProductSchema, productIdParamSchema } from "./products.schemas";
+import * as productsController from "./products.controller.js";
+import { createProductSchema, updateProductSchema, productIdParamSchema } from "./products.schemas.js";
 
 export async function productsRoutes(app: FastifyInstance) {
   // Use ZodTypeProvider for this scope

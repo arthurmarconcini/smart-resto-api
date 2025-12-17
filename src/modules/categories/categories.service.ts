@@ -1,6 +1,6 @@
 
-import * as categoriesRepository from "./categories.repository";
-import type { CreateCategoryInput } from "./categories.schemas";
+import * as categoriesRepository from "./categories.repository.js";
+import type { CreateCategoryInput } from "./categories.schemas.js";
 
 export async function createCategory(data: CreateCategoryInput) {
   return categoriesRepository.create({

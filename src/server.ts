@@ -2,9 +2,9 @@
 import fastify from 'fastify'
 import cors from '@fastify/cors';
 import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod'
-import { productsRoutes } from './modules/products/products.routes'
-import { companiesRoutes } from './modules/companies/company.routes'
-import { categoriesRoutes } from './modules/categories/categories.routes'
+import { productsRoutes } from './modules/products/products.routes.js'
+import { companiesRoutes } from './modules/companies/company.routes.js'
+import { categoriesRoutes } from './modules/categories/categories.routes.js'
 
 const app = fastify()
 
