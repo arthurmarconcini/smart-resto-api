@@ -24,7 +24,12 @@ jobs:
         run: npm install
 
       - name: Generate Prisma Client
+        # Adicionamos uma URL fictícia aqui apenas para o build passar
         run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://johndoe:mypassword@localhost:5432/mydb?schema=public"
 
       - name: Build project
         run: npm run build
+        env:
+          DATABASE_URL: "postgresql://johndoe:mypassword@localhost:5432/mydb?schema=public"
