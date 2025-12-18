@@ -12,13 +12,18 @@ app.register(cors, {
   origin: true,
 })
 
+app.get("/", () => {
+  return {
+    message: "Hello World"
+  }
+})
+
 app.setValidatorCompiler(validatorCompiler)
 app.setSerializerCompiler(serializerCompiler)
 
 app.register(productsRoutes, { prefix: '/products' })
 app.register(companiesRoutes, { prefix: '/companies' })
 app.register(categoriesRoutes, { prefix: '/categories' })
-
 
 app.listen({ 
   port: Number(process.env.PORT) || 3333, 

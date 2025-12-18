@@ -12,3 +12,5 @@ export async function createCompany(req: FastifyRequest<{ Body: CreateCompanyInp
     return reply.code(500).send({ error: "Failed to create company" });
   }
 }
+
+
