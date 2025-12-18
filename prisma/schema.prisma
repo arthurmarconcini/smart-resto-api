@@ -31,8 +31,10 @@ model Product {
   name        String
   description String?
   costPrice   Decimal
+  salePrice   Decimal
   markup      Decimal  @default(0)
-  salesPrice  Decimal
+  stock       Decimal  @default(0)
+  unit        String
   company     Company  @relation(fields: [companyId], references: [id])
   companyId   String
   category    Category @relation(fields: [categoryId], references: [id])

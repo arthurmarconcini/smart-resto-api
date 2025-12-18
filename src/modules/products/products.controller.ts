@@ -30,8 +30,8 @@ export async function getProduct(req: FastifyRequest<{ Params: { id: string } }>
 export async function listProducts(req: FastifyRequest<{ Querystring: ListProductsQuery }>, reply: FastifyReply) {
   try {
     const { companyId } = req;
-    const products = await productsService.listProducts(companyId, req.query);
-    return reply.send(products);
+    const result = await productsService.listProducts(companyId, req.query);
+    return reply.send(result);
   } catch (error) {
     console.error(error);
     return reply.code(500).send({ error: "Failed to list products" });

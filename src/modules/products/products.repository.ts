@@ -14,23 +14,50 @@ export async function findById(id: string, companyId: string) {
   });
 }
 
-export async function findAll(companyId: string, filters: { name?: string | undefined; categoryId?: string | undefined }) {
+export async function findAll(
+  companyId: string, 
+  params: { 
+    page: number; 
+    limit: number; 
+    search?: string; 
+    categoryId?: string 
+  }
+) {
+  const { page, limit, search, categoryId } = params;
+  const skip = (page - 1) * limit;
+
   const where: Prisma.ProductWhereInput = {
     companyId,
   };
 
-  if (filters.name) {
-    where.name = { contains: filters.name, mode: "insensitive" };
+  if (search) {
+    where.name = { contains: search, mode: "insensitive" };
   }
 
-  if (filters.categoryId) {
-    where.categoryId = filters.categoryId;
+  if (categoryId) {
+    where.categoryId = categoryId;
   }
 
-  return prisma.product.findMany({
-    where,
-    orderBy: { name: "asc" },
-  });
+  const [total, data] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { name: "asc" },
+      include: { category: true } // Helpful context
+    }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    }
+  };
 }
 
 export async function update(id: string, companyId: string, data: Prisma.ProductUpdateInput) {

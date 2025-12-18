@@ -5,29 +5,33 @@ export const createProductSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   costPrice: z.number().min(0, "Cost price must be positive"),
-  salesPrice: z.number().min(0, "Sales price must be positive").optional(),
+  salePrice: z.number().min(0, "Sales price must be positive").optional(),
   markup: z.number().optional(),
-  categoryId: z.string().uuid("Invalid Category ID"),
-}).refine(data => data.salesPrice !== undefined || data.markup !== undefined, {
-    message: "Either salesPrice or markup must be provided",
-    path: ["salesPrice", "markup"],
+  unit: z.string().min(1, "Unit is required"), // e.g., 'kg', 'un', 'l'
+  categoryId: z.uuid("Invalid Category ID"),
+}).refine(data => data.salePrice !== undefined || data.markup !== undefined, {
+    message: "Either salePrice or markup must be provided",
+    path: ["salePrice", "markup"],
 });
 
 export const updateProductSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   costPrice: z.number().min(0).optional(),
-  salesPrice: z.number().min(0).optional(),
+  salePrice: z.number().min(0).optional(),
   markup: z.number().optional(),
+  unit: z.string().optional(),
 });
 
 export const listProductsQuerySchema = z.object({
-  name: z.string().optional(),
-  categoryId: z.string().uuid().optional(),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(10),
+  search: z.string().optional(),
+  categoryId: z.uuid().optional(),
 });
 
 export const productIdParamSchema = z.object({
-  id: z.string().uuid("Invalid Product ID"),
+  id: z.uuid("Invalid Product ID"),
 });
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
