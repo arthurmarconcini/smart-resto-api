@@ -1,12 +1,15 @@
-
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import * as productsController from "./products.controller.js";
-import { createProductSchema, updateProductSchema, productIdParamSchema } from "./products.schemas.js";
+import { createProductSchema, updateProductSchema, productIdParamSchema, listProductsQuerySchema } from "./products.schemas.js";
+import { fakeAuthMiddleware } from "../../middlewares/fakeAuth.js";
 
 export async function productsRoutes(app: FastifyInstance) {
   // Use ZodTypeProvider for this scope
   const server = app.withTypeProvider<ZodTypeProvider>();
+
+  // Apply fake auth middleware to all routes in this context
+  server.addHook("preHandler", fakeAuthMiddleware);
 
   server.post(
     "/",
@@ -18,7 +21,15 @@ export async function productsRoutes(app: FastifyInstance) {
     productsController.createProduct
   );
 
-  server.get("/", productsController.listProducts);
+  server.get(
+    "/", 
+    {
+      schema: {
+        querystring: listProductsQuerySchema, 
+      },
+    },
+    productsController.listProducts
+  );
 
   server.get(
     "/:id",
