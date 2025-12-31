@@ -1,6 +1,7 @@
 
 import * as categoriesRepository from "./categories.repository.js";
 import type { CreateCategoryInput, listCategoriesQuery, UpdateCategoryInput } from "./categories.schemas.js";
+import { Prisma } from "@prisma/client";
 
 export async function createCategory(data: CreateCategoryInput) {
   return categoriesRepository.create({
@@ -31,7 +32,7 @@ export async function updateCategory(id: string, companyId: string, data: Update
     
     // exactOptionalPropertyTypes: true fix
     // We must ensure we don't pass explicit undefined for optional fields
-    const updateData: any = {};
+    const updateData: Prisma.CategoryUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
 
     return categoriesRepository.update(id, companyId, updateData);

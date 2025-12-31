@@ -4,3 +4,4 @@ dist
 *.log
 generated
 postgres_data
+scripts/

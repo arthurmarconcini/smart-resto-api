@@ -19,8 +19,8 @@ export async function getProduct(req: FastifyRequest<{ Params: { id: string } }>
     const { companyId } = req;
     const product = await productsService.getProduct(id, companyId);
     return reply.send(product);
-  } catch (error: any) {
-    if (error.message.includes("not found")) {
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("not found")) {
       return reply.code(404).send({ error: error.message });
     }
     return reply.code(500).send({ error: "Failed to fetch product" });
@@ -45,8 +45,8 @@ export async function updateProduct(req: FastifyRequest<{ Params: { id: string }
     
     const product = await productsService.updateProduct(id, companyId, req.body);
     return reply.send(product);
-  } catch (error: any) {
-      if (error.message.includes("not found")) {
+  } catch (error) {
+      if (error instanceof Error && error.message.includes("not found")) {
       return reply.code(404).send({ error: error.message });
     }
     console.error(error);
@@ -60,8 +60,8 @@ export async function deleteProduct(req: FastifyRequest<{ Params: { id: string }
     const { companyId } = req;
     await productsService.deleteProduct(id, companyId);
     return reply.code(204).send();
-  } catch (error: any) {
-      if (error.message.includes("not found")) {
+  } catch (error) {
+      if (error instanceof Error && error.message.includes("not found")) {
       return reply.code(404).send({ error: error.message });
     }
     return reply.code(500).send({ error: "Failed to delete product" });

@@ -8,7 +8,7 @@ export async function authRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
   server.post(
-    "/signup",
+    "/sign-up",
     {
       schema: {
         body: signUpSchema,
@@ -18,7 +18,7 @@ export async function authRoutes(app: FastifyInstance) {
   );
 
   server.post(
-    "/signin",
+    "/sign-in",
     {
       schema: {
         body: signInSchema,

@@ -10,6 +10,7 @@ import { companiesRoutes } from './modules/companies/company.routes.js'
 import { categoriesRoutes } from './modules/categories/categories.routes.js'
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { financeRoutes } from './modules/finance/finance.routes.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = fastify()
 
@@ -28,7 +29,9 @@ app.get("/", () => {
 })
 
 app.setValidatorCompiler(validatorCompiler)
+app.setValidatorCompiler(validatorCompiler)
 app.setSerializerCompiler(serializerCompiler)
+app.setErrorHandler(errorHandler);
 
 app.register(fastifySwagger, {
   openapi: {

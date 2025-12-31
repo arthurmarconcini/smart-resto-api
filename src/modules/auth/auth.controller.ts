@@ -2,6 +2,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import * as authService from "./auth.service.js";
 import type { SignUpInput, SignInInput } from "./auth.schemas.js";
+import { AppError } from "../../errors/AppError.js";
 
 export async function signUp(req: FastifyRequest<{ Body: SignUpInput }>, reply: FastifyReply) {
   try {
@@ -19,12 +20,11 @@ export async function signUp(req: FastifyRequest<{ Body: SignUpInput }>, reply: 
         name: company.name,
       }
     });
-  } catch (error: any) {
-    if (error.message === "User already exists") {
-      return reply.code(409).send({ error: error.message });
+  } catch (error) {
+    if (error instanceof Error && error.message === "User already exists") {
+        throw new AppError("User already exists", 409);
     }
-    console.error(error);
-    return reply.code(500).send({ error: "Internal Server Error" });
+    throw error;
   }
 }
 
@@ -38,11 +38,10 @@ export async function signIn(req: FastifyRequest<{ Body: SignInInput }>, reply: 
     });
 
     return reply.send({ token });
-  } catch (error: any) {
-    if (error.message === "Invalid credentials") {
-      return reply.code(401).send({ error: error.message });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Invalid credentials") {
+        throw new AppError("Invalid credentials", 401);
     }
-    console.error(error);
-    return reply.code(500).send({ error: "Internal Server Error" });
+    throw error;
   }
 }

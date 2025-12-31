@@ -1,6 +1,7 @@
 
 import * as financeRepository from "./finance.repository.js";
 import type { CreateExpenseInput, UpdateExpenseInput } from "./finance.schemas.js";
+import { Prisma } from "@prisma/client";
 
 export async function createExpense(data: CreateExpenseInput, companyId: string) {
   return financeRepository.create({
@@ -22,7 +23,7 @@ export async function updateExpense(id: string, companyId: string, data: UpdateE
   if (!expense) throw new Error("Expense not found");
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
-  const updateData: any = {};
+  const updateData: Prisma.ExpenseUpdateInput = {};
   if (data.description !== undefined) updateData.description = data.description;
   if (data.amount !== undefined) updateData.amount = data.amount;
   if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);

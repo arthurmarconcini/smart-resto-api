@@ -4,6 +4,7 @@ import type { CreateCompanyInput } from "./company.schemas.js";
 
 import * as productsRepository from "../products/products.repository.js";
 import * as financeService from "../finance/finance.service.js";
+import { Prisma } from "@prisma/client";
 
 export async function createCompany(data: CreateCompanyInput) {
   return companiesRepository.create({
@@ -15,7 +16,7 @@ export async function createCompany(data: CreateCompanyInput) {
 
 export async function updateCompanySettings(id: string, data: { monthlyFixedCost?: number; defaultTaxRate?: number; defaultCardFee?: number; desiredProfit?: number; targetProfitValue?: number }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: any = {};
+  const updateData: Prisma.CompanyUpdateInput = {};
   if (data.monthlyFixedCost !== undefined) updateData.monthlyFixedCost = data.monthlyFixedCost;
   if (data.defaultTaxRate !== undefined) updateData.defaultTaxRate = data.defaultTaxRate;
   if (data.defaultCardFee !== undefined) updateData.defaultCardFee = data.defaultCardFee;
