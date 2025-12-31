@@ -9,9 +9,6 @@ export const createProductSchema = z.object({
   markup: z.number().optional(),
   unit: z.string().min(1, "Unit is required"), // e.g., 'kg', 'un', 'l'
   categoryId: z.uuid("Invalid Category ID"),
-}).refine(data => data.salePrice !== undefined || data.markup !== undefined, {
-    message: "Either salePrice or markup must be provided",
-    path: ["salePrice", "markup"],
 });
 
 export const updateProductSchema = z.object({

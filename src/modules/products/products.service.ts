@@ -3,42 +3,76 @@ import * as productsRepository from "./products.repository.js";
 import type { CreateProductInput, UpdateProductInput, ListProductsQuery } from "./products.schemas.js";
 import { Prisma } from "@prisma/client";
 
-// Core business logic for pricing
-// Formula: Markup = ((Sales - Cost) / Cost) * 100
-// Formula: Sales = Cost * (1 + Markup/100)
-function calculatePricingValues(costPrice: number, salePrice?: number, markup?: number) {
+// Core business logic for smart pricing
+// Suggested Price = Cost / (1 - (Tax% + Fees% + ProfitMargin%))
+// If user provides salePrice, we calculate markup/margin.
+// If user provides markup/margin, we calculate salePrice.
+interface PricingSettings {
+  taxRate?: number;
+  cardFee?: number;
+  desiredMargin?: number;
+}
+
+function calculateSmartPricing(costPrice: number, settings: PricingSettings, salePrice?: number) {
+  const tax = (settings.taxRate ?? 0) / 100;
+  const fee = (settings.cardFee ?? 0) / 100;
+  const margin = (settings.desiredMargin ?? 0) / 100;
+  
   if (salePrice !== undefined) {
-    // Calculate markup based on salePrice
-    if (costPrice === 0) return { costPrice, salePrice, markup: 0, profitMargin: 0 }; // Avoid division by zero
+    // If sale price given, we calculate the implied margin or just accept it? 
+    // Usually markup is just (Sale-Cost)/Cost.
+    // Let's stick to simple markup calculation for consistency in storage, 
+    // but the system will suggest the optimal price if asked.
+    // The requirement says "The API must calculate automatically the suggested sale price".
+    // This usually implies when CREATING/UPDATING with COST, we default to the suggested price if no price given.
     
-    // markup = ((venda - custo) / custo) * 100
-    const calculatedMarkup = ((salePrice - costPrice) / costPrice) * 100;
+    // For now, let's keep standard markup calculation if SalePrice is explicit.
+    const calculatedMarkup = costPrice > 0 ? ((salePrice - costPrice) / costPrice) * 100 : 0;
+    return { costPrice, salePrice, markup: Number(calculatedMarkup.toFixed(2)) };
+  } else {
+    // Calculate Suggested Price
+    // Denominator = 1 - (Tax + Fee + Margin)
+    const denominator = 1 - (tax + fee + margin);
     
-    return { 
-      costPrice, 
-      salePrice, 
-      markup: parseFloat(calculatedMarkup.toFixed(2)) 
-    };
-  } else if (markup !== undefined) {
-    // Calculate salePrice based on markup
-    // venda = custo * (1 + markup/100)
-    const calculatedSalesPrice = costPrice * (1 + markup / 100);
+    let suggestedPrice = 0;
+    if (denominator > 0) {
+        suggestedPrice = costPrice / denominator;
+    } else {
+        // Fallback: If margins > 100% (impossible denominator), just add simple markup? 
+        // Or throw error? Let's just do Cost * (1 + Sum) as fallback to avoid crash/infinite.
+        suggestedPrice = costPrice * (1 + tax + fee + margin);
+    }
     
-    return { 
-      costPrice, 
-      markup, 
-      salePrice: parseFloat(calculatedSalesPrice.toFixed(2)) 
+    const calculatedMarkup = costPrice > 0 ? ((suggestedPrice - costPrice) / costPrice) * 100 : 0;
+    
+    return {
+        costPrice,
+        salePrice: Number(suggestedPrice.toFixed(2)),
+        markup: Number(calculatedMarkup.toFixed(2))
     };
   }
-  return { costPrice, salePrice, markup };
+}
+
+import * as companiesRepository from "../companies/company.repository.js";
+
+// Helper to get settings
+async function getCompanyPricingSettings(companyId: string): Promise<PricingSettings> {
+    const company = await companiesRepository.findById(companyId);
+    if (!company) throw new Error("Company not found");
+    return {
+        taxRate: Number(company.defaultTaxRate),
+        cardFee: Number(company.defaultCardFee),
+        desiredMargin: Number(company.desiredProfit),
+    };
 }
 
 export async function createProduct(data: CreateProductInput, companyId: string) {
   const { costPrice, salePrice, markup, categoryId, description, unit, ...rest } = data;
 
-  const pricing = calculatePricingValues(costPrice, salePrice, markup)
+  const settings = await getCompanyPricingSettings(companyId);
+  const pricing = calculateSmartPricing(costPrice, settings, salePrice);
   
-  const finalSalesPrice = pricing.salePrice ?? 0; // Should not happen given validation
+  const finalSalesPrice = pricing.salePrice ?? 0;
   const finalMarkup = pricing.markup ?? 0;
 
   return productsRepository.create({
@@ -79,21 +113,31 @@ export async function updateProduct(id: string, companyId: string, data: UpdateP
   
   const newCost = data.costPrice ?? productCost;
   
+  const settings = await getCompanyPricingSettings(companyId);
+  
   let pricingUpdate: { costPrice?: number; salePrice?: number | undefined; markup?: number | undefined } = {};
 
+  // If cost changes or user asks to update price via logic
   if (data.costPrice !== undefined) {
-     if (data.markup !== undefined) {
-        pricingUpdate = calculatePricingValues(data.costPrice, undefined, data.markup);
-     } else if (data.salePrice !== undefined) {
-         pricingUpdate = calculatePricingValues(data.costPrice, data.salePrice, undefined);
-     }
+      // If salePrice provided, prioritize it (manual override)
+      if (data.salePrice !== undefined) {
+          pricingUpdate = calculateSmartPricing(data.costPrice, settings, data.salePrice);
+      } else {
+          // If ONLY cost provided, recalculate salePrice based on smart settings
+          // UNLESS user provided markup (legacy behavior). Assuming smart pricing takes precedence if no manual price.
+          // Let's assume if cost changes, we recalculate suggested price unless salePrice given.
+          pricingUpdate = calculateSmartPricing(data.costPrice, settings, undefined);
+      }
   } else {
-     // Cost price not changing, but we use 'newCost' (which is productCost)
-     if (data.markup !== undefined) {
-         pricingUpdate = calculatePricingValues(newCost, undefined, data.markup);
-     } else if (data.salePrice !== undefined) {
-         pricingUpdate = calculatePricingValues(newCost, data.salePrice, undefined);
-     }
+      // Cost unchanged
+      if (data.salePrice !== undefined) {
+          pricingUpdate = calculateSmartPricing(newCost, settings, data.salePrice);
+      } else if (data.markup !== undefined) {
+         // Legacy markup change? 
+         // System doesn't support "update margin to X" directly in this signature, 
+         // but if we want to "re-calculate based on current settings", maybe we need a flag.
+         // For now, if no cost/salePrice change, we do nothing to pricing unless explicitly requested.
+      }
   }
 
   // Construct update data cleanly without undefined
