@@ -13,4 +13,24 @@ export async function createCompany(req: FastifyRequest<{ Body: CreateCompanyInp
   }
 }
 
+export async function getSalesTarget(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const target = await companiesService.calculateSalesTarget(req.companyId!);
+    return reply.send(target);
+  } catch (error) {
+    console.error(error);
+    return reply.code(500).send({ error: "Failed to calculate sales target" });
+  }
+}
+
+export async function updateSettings(req: FastifyRequest<{ Body: { monthlyFixedCost?: number; defaultTaxRate?: number; defaultCardFee?: number; desiredProfit?: number } }>, reply: FastifyReply) {
+    try {
+        const company = await companiesService.updateCompanySettings(req.companyId!, req.body);
+        return reply.send(company);
+    } catch (error) {
+        console.error(error);
+        return reply.code(500).send({ error: "Failed to update company settings" });
+    }
+}
+
 
