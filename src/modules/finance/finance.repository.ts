@@ -36,7 +36,8 @@ export async function deleteExpense(id: string, companyId: string) {
 
 export async function sumUnpaidExpenses(companyId: string, month: number, year: number) {
   const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0); // Last day of month
+  const endDate = new Date(year, month, 0); 
+  endDate.setHours(23, 59, 59, 999); // Include full last day
 
   const expenses = await prisma.expense.findMany({
     where: {

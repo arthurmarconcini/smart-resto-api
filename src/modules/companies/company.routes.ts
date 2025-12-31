@@ -38,6 +38,7 @@ export async function companiesRoutes(app: FastifyInstance) {
                     defaultTaxRate: z.number().optional(),
                     defaultCardFee: z.number().optional(),
                     desiredProfit: z.number().optional(),
+                    targetProfitValue: z.number().optional(),
                 })
             }
         },

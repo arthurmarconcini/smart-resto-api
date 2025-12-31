@@ -7,7 +7,7 @@ export async function createExpense(data: CreateExpenseInput, companyId: string)
     description: data.description,
     amount: data.amount,
     dueDate: new Date(data.dueDate),
-    isPaid: data.isPaid || false,
+    status: data.status || "PENDING",
     isRecurring: data.isRecurring || false,
     company: { connect: { id: companyId } },
   });
@@ -26,7 +26,7 @@ export async function updateExpense(id: string, companyId: string, data: UpdateE
   if (data.description !== undefined) updateData.description = data.description;
   if (data.amount !== undefined) updateData.amount = data.amount;
   if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
-  if (data.isPaid !== undefined) updateData.isPaid = data.isPaid;
+  if (data.status !== undefined) updateData.status = data.status;
   if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring;
   
   return financeRepository.update(id, companyId, updateData);

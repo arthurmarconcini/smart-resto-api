@@ -7,18 +7,19 @@ datasource db {
 }
 
 model Company {
-  id               String     @id @default(uuid())
-  name             String
-  desiredProfit    Decimal    @default(0)
-  categories       Category[]
-  products         Product[]
-  users            User[]
-  monthlyFixedCost Decimal    @default(0)
-  defaultTaxRate   Decimal    @default(0)
-  defaultCardFee   Decimal    @default(0)
-  expenses         Expense[]
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id                String     @id @default(uuid())
+  name              String
+  desiredProfit     Decimal    @default(0)
+  categories        Category[]
+  products          Product[]
+  users             User[]
+  monthlyFixedCost  Decimal    @default(0)
+  defaultTaxRate    Decimal    @default(0)
+  defaultCardFee    Decimal    @default(0)
+  targetProfitValue Decimal    @default(0)
+  expenses          Expense[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 }
 
 model Category {
@@ -58,15 +59,19 @@ model User {
   createdAt DateTime @default(now())
 }
 
+enum ExpenseStatus {
+  PENDING
+  PAID
+}
 
 model Expense {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   description String
   amount      Decimal
   dueDate     DateTime
-  isPaid      Boolean  @default(false)
-  isRecurring Boolean  @default(false)
-  company     Company  @relation(fields: [companyId], references: [id])
+  status      ExpenseStatus @default(PENDING)
+  isRecurring Boolean       @default(false)
+  company     Company       @relation(fields: [companyId], references: [id])
   companyId   String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime      @default(now())
 }

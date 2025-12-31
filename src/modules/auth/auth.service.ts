@@ -21,6 +21,11 @@ export async function signUp(data: SignUpInput) {
     const company = await tx.company.create({
       data: {
         name: companyName,
+        desiredProfit: 0,
+        monthlyFixedCost: 0,
+        defaultTaxRate: 0,
+        defaultCardFee: 0,
+        targetProfitValue: 0,
       },
     });
 

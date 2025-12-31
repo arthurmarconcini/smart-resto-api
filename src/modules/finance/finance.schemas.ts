@@ -5,7 +5,7 @@ export const createExpenseSchema = z.object({
   description: z.string().min(1, "Description is required"),
   amount: z.number().positive("Amount must be positive"),
   dueDate: z.string().datetime(), // ISO 8601 string
-  isPaid: z.boolean().optional().default(false),
+  status: z.enum(["PENDING", "PAID"]).optional().default("PENDING"),
   isRecurring: z.boolean().optional().default(false),
 });
 

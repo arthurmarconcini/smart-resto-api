@@ -23,7 +23,7 @@ export async function getSalesTarget(req: FastifyRequest, reply: FastifyReply) {
   }
 }
 
-export async function updateSettings(req: FastifyRequest<{ Body: { monthlyFixedCost?: number; defaultTaxRate?: number; defaultCardFee?: number; desiredProfit?: number } }>, reply: FastifyReply) {
+export async function updateSettings(req: FastifyRequest<{ Body: { monthlyFixedCost?: number; defaultTaxRate?: number; defaultCardFee?: number; desiredProfit?: number; targetProfitValue?: number } }>, reply: FastifyReply) {
     try {
         const company = await companiesService.updateCompanySettings(req.companyId!, req.body);
         return reply.send(company);
