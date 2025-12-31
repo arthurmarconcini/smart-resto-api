@@ -3,13 +3,13 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import * as categoriesController from "./categories.controller.js";
 import { createCategorySchema, listCategoriesQuerySchema, categoryIdParamSchema, updateCategorySchema } from "./categories.schemas.js";
-import { fakeAuthMiddleware } from "../../middlewares/fakeAuth.js";
+import { authMiddleware } from "../../middlewares/auth.middleware.js";
 
 export async function categoriesRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
   // Apply fake auth middleware
-  server.addHook("preHandler", fakeAuthMiddleware);
+  server.addHook("preHandler", authMiddleware);
 
   server.post(
     "/",

@@ -4,7 +4,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import * as companiesController from "./company.controller.js";
 import { createCompanySchema } from "./company.schemas.js";
 
-import { fakeAuthMiddleware } from "../../middlewares/fakeAuth.js";
+import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { z } from "zod";
 
 export async function companiesRoutes(app: FastifyInstance) {
@@ -27,7 +27,7 @@ export async function companiesRoutes(app: FastifyInstance) {
 
   // Authenticated routes
   server.register(async (protectedRoutes) => {
-    protectedRoutes.addHook("preHandler", fakeAuthMiddleware);
+    protectedRoutes.addHook("preHandler", authMiddleware);
 
     protectedRoutes.put(
         "/settings",
