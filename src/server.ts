@@ -4,14 +4,20 @@ import cors from '@fastify/cors';
 import { validatorCompiler, serializerCompiler, jsonSchemaTransform } from 'fastify-type-provider-zod'
 import fastifySwagger from '@fastify/swagger';
 import fastifyApiReference from '@scalar/fastify-api-reference';
+import fastifyJwt from '@fastify/jwt';
 import { productsRoutes } from './modules/products/products.routes.js'
 import { companiesRoutes } from './modules/companies/company.routes.js'
 import { categoriesRoutes } from './modules/categories/categories.routes.js'
+import { authRoutes } from './modules/auth/auth.routes.js';
 
 const app = fastify()
 
 app.register(cors, {
   origin: true,
+})
+
+app.register(fastifyJwt, {
+  secret: process.env.JWT_SECRET || 'supersecret',
 })
 
 app.get("/", () => {
@@ -50,6 +56,7 @@ app.register(fastifyApiReference, {
   },
 });
 
+app.register(authRoutes, { prefix: '/auth' })
 app.register(productsRoutes, { prefix: '/products' })
 app.register(companiesRoutes, { prefix: '/companies' })
 app.register(categoriesRoutes, { prefix: '/categories' })

@@ -1,7 +1,11 @@
-import "fastify";
+import "@fastify/jwt";
 
 declare module "fastify" {
-  interface FastifyRequest {
-    companyId: string;
+  export interface FastifyRequest {
+    companyId: string; // Keeping for backward compatibility or ease of use
+    user: {
+      sub: string;
+      companyId: string;
+    }
   }
 }

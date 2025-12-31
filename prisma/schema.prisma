@@ -12,6 +12,7 @@ model Company {
   desiredProfit Decimal    @default(0)
   categories    Category[]
   products      Product[]
+  users         User[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
@@ -41,4 +42,15 @@ model Product {
   categoryId  String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  createdAt DateTime @default(now())
 }
