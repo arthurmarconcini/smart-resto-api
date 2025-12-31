@@ -33,6 +33,14 @@ export async function signUp(data: SignUpInput) {
       },
     });
 
+    // Create a default category to simplify onboarding
+    await tx.category.create({
+      data: {
+        name: "Geral",
+        companyId: company.id,
+      },
+    });
+
     return { user, company };
   });
 
