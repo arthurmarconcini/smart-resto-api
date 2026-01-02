@@ -76,3 +76,28 @@ export async function signIn(data: SignInInput) {
     companyId: user.companyId 
   };
 }
+
+export async function getMe(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      company: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
+    company: {
+      id: user.company.id,
+      name: user.company.name,
+    },
+  };
+}

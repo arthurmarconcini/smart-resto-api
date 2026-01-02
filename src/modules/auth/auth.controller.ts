@@ -45,3 +45,17 @@ export async function signIn(req: FastifyRequest<{ Body: SignInInput }>, reply: 
     throw error;
   }
 }
+
+export async function getMe(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const user = req.user as { sub: string };
+    const userId = user.sub;
+    const result = await authService.getMe(userId);
+    return reply.send(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === "User not found") {
+        throw new AppError("User not found", 404);
+    }
+    throw error;
+  }
+}

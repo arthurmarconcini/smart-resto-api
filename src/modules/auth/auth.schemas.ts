@@ -16,3 +16,17 @@ export const signInSchema = z.object({
 });
 
 export type SignInInput = z.infer<typeof signInSchema>;
+
+export const getMeResponseSchema = z.object({
+  user: z.object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string().email(),
+  }),
+  company: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+});
+
+export type GetMeResponse = z.infer<typeof getMeResponseSchema>;
