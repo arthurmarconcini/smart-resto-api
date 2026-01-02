@@ -10,6 +10,7 @@ import { companiesRoutes } from './modules/companies/company.routes.js'
 import { categoriesRoutes } from './modules/categories/categories.routes.js'
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { financeRoutes } from './modules/finance/finance.routes.js';
+import { revenueRoutes } from './modules/revenue/revenue.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = fastify()
@@ -65,6 +66,7 @@ app.register(productsRoutes, { prefix: '/products' })
 app.register(companiesRoutes, { prefix: '/companies' })
 app.register(categoriesRoutes, { prefix: '/categories' })
 app.register(financeRoutes, { prefix: '/finance' })
+app.register(revenueRoutes, { prefix: '/revenue' })
 
 app.listen({ 
   port: Number(process.env.PORT) || 3333, 

@@ -7,19 +7,20 @@ datasource db {
 }
 
 model Company {
-  id                String     @id @default(uuid())
+  id                String           @id @default(uuid())
   name              String
-  desiredProfit     Decimal    @default(0)
+  desiredProfit     Decimal          @default(0)
   categories        Category[]
   products          Product[]
   users             User[]
-  monthlyFixedCost  Decimal    @default(0)
-  defaultTaxRate    Decimal    @default(0)
-  defaultCardFee    Decimal    @default(0)
-  targetProfitValue Decimal    @default(0)
+  monthlyFixedCost  Decimal          @default(0)
+  defaultTaxRate    Decimal          @default(0)
+  defaultCardFee    Decimal          @default(0)
+  targetProfitValue Decimal          @default(0)
   expenses          Expense[]
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  monthlyRevenues   MonthlyRevenue[]
 }
 
 model Category {
@@ -59,19 +60,40 @@ model User {
   createdAt DateTime @default(now())
 }
 
+enum ExpenseCategory {
+  FIXED
+  VARIABLE
+  DEBT
+  INVESTMENT
+}
+
 enum ExpenseStatus {
   PENDING
   PAID
 }
 
 model Expense {
-  id          String        @id @default(uuid())
+  id          String          @id @default(uuid())
   description String
   amount      Decimal
   dueDate     DateTime
-  status      ExpenseStatus @default(PENDING)
-  isRecurring Boolean       @default(false)
-  company     Company       @relation(fields: [companyId], references: [id])
+  paidAt      DateTime?
+  category    ExpenseCategory @default(FIXED)
+  status      ExpenseStatus   @default(PENDING)
+  isRecurring Boolean         @default(false)
+  company     Company         @relation(fields: [companyId], references: [id])
   companyId   String
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime        @default(now())
+}
+
+model MonthlyRevenue {
+  id           String   @id @default(uuid())
+  month        Int
+  year         Int
+  totalRevenue Decimal
+  company      Company  @relation(fields: [companyId], references: [id])
+  companyId    String
+  createdAt    DateTime @default(now())
+
+  @@unique([month, year, companyId])
 }
