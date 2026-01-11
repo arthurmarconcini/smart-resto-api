@@ -30,19 +30,34 @@ export async function companiesRoutes(app: FastifyInstance) {
     protectedRoutes.addHook("preHandler", authMiddleware);
 
     protectedRoutes.put(
-        "/settings",
-        {
-            schema: {
-                body: z.object({
-                    monthlyFixedCost: z.number().optional(),
-                    defaultTaxRate: z.number().optional(),
-                    defaultCardFee: z.number().optional(),
-                    desiredProfit: z.number().optional(),
-                    targetProfitValue: z.number().optional(),
-                })
-            }
+      "/settings",
+      {
+        schema: {
+          body: z.object({
+            monthlyFixedCost: z.number().min(0).optional(),
+            defaultTaxRate: z.number().min(0).max(100).optional(),
+            defaultCardFee: z.number().min(0).max(100).optional(),
+            desiredProfit: z.number().min(0).max(1000).optional(), // Margin per product
+            targetProfitValue: z.number().min(0).optional(), // Monthly target
+          }),
+          response: {
+            200: z.object({
+              id: z.string(),
+              name: z.string(),
+              // Monetary/Percent fields returned as standard Numbers for Frontend
+              monthlyFixedCost: z.number(),
+              defaultTaxRate: z.number(),
+              defaultCardFee: z.number(),
+              desiredProfit: z.number(),
+              targetProfitValue: z.number(),
+              isConfigured: z.boolean(),
+              createdAt: z.date(),
+              updatedAt: z.date(),
+            }),
+          },
         },
-        companiesController.updateSettings
+      },
+      companiesController.updateSettings
     );
 
     protectedRoutes.get("/targets", companiesController.getSalesTarget);
