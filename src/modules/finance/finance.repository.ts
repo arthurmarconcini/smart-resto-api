@@ -63,3 +63,25 @@ export async function sumUnpaidExpenses(companyId: string, month: number, year: 
 
   return expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
 }
+
+export async function findPendingExpensesInMonth(companyId: string, month: number, year: number) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0); 
+  endDate.setHours(23, 59, 59, 999);
+
+  return prisma.expense.findMany({
+    where: {
+      companyId,
+      status: "PENDING",
+      OR: [
+        { isRecurring: true },
+        {
+          dueDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      ],
+    },
+  });
+}

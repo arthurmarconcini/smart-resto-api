@@ -9,7 +9,10 @@ export async function createExpense(req: FastifyRequest<{ Body: CreateExpenseInp
     return reply.code(201).send(expense);
   } catch (error) {
     console.error(error);
-    return reply.code(500).send({ error: "Failed to create expense" });
+    if (error instanceof Error) {
+        return reply.code(500).send({ error: error.message, stack: error.stack });
+    }
+    return reply.code(500).send({ error: "Failed to create expense", details: error });
   }
 }
 
@@ -40,5 +43,16 @@ export async function deleteExpense(req: FastifyRequest<{ Params: { id: string }
     } catch (error) {
         console.error(error);
         return reply.code(500).send({ error: "Failed to delete expense" });
+    }
+}
+
+export async function getFinancialForecast(req: FastifyRequest<{ Querystring: { month?: number; year?: number } }>, reply: FastifyReply) {
+    try {
+        const { month, year } = req.query;
+        const forecast = await financeService.getFinancialForecast(req.companyId!, month, year);
+        return reply.send(forecast);
+    } catch (error) {
+        console.error(error);
+        return reply.code(500).send({ error: "Failed to get financial forecast" });
     }
 }

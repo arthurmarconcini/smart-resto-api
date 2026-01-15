@@ -4,6 +4,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import * as financeController from "./finance.controller.js";
 import { createExpenseSchema, updateExpenseSchema, expenseIdParamSchema } from "./finance.schemas.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { z } from "zod";
 
 export async function financeRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
@@ -18,6 +19,19 @@ export async function financeRoutes(app: FastifyInstance) {
       },
     },
     financeController.createExpense
+  );
+
+  server.get(
+    "/forecast",
+    {
+      schema: {
+        querystring: z.object({
+          month: z.coerce.number().optional(),
+          year: z.coerce.number().optional(),
+        }),
+      },
+    },
+    financeController.getFinancialForecast
   );
 
   server.get("/expenses", financeController.listExpenses);
