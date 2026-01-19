@@ -21,6 +21,7 @@ model Company {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   monthlyRevenues   MonthlyRevenue[]
+  sales             Sale[]
 }
 
 model Category {
@@ -48,6 +49,7 @@ model Product {
   categoryId  String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  saleItems   SaleItem[]
 }
 
 model User {
@@ -96,4 +98,31 @@ model MonthlyRevenue {
   createdAt    DateTime @default(now())
 
   @@unique([month, year, companyId])
+}
+
+enum SaleType {
+  DAILY_TOTAL
+  ITEMIZED
+}
+
+model Sale {
+  id          String     @id @default(uuid())
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  date        DateTime
+  totalAmount Decimal
+  type        SaleType   @default(ITEMIZED)
+  createdAt   DateTime   @default(now())
+  items       SaleItem[]
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Decimal
+  unitPrice Decimal
+  subTotal  Decimal
 }
