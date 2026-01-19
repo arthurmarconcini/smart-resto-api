@@ -11,28 +11,28 @@ export async function createExpense(data: CreateExpenseInput, companyId: string)
 
   if (installments > 1) {
     const installmentAmount = Number(data.amount) / installments;
-    return prisma.$transaction(async (tx) => {
-      const promises = [];
-      for (let i = 1; i <= installments; i++) {
-        const dueDate = new Date(data.dueDate);
-        dueDate.setDate(dueDate.getDate() + (i - 1) * intervalDays);
 
-        promises.push(
-          tx.expense.create({
-            data: {
-              description: `${data.description} (${i}/${installments})`,
-              amount: installmentAmount,
-              dueDate: dueDate,
-              paidAt: data.paidAt ? new Date(data.paidAt) : null,
-              status: data.status || "PENDING",
-              category: data.category,
-              isRecurring: data.isRecurring || false,
-              company: { connect: { id: companyId } },
-            },
-          })
-        );
+    return prisma.$transaction(async (tx) => {
+      const createdExpenses = [];
+      for (let i = 0; i < installments; i++) {
+        const dueDate = new Date(data.dueDate);
+        dueDate.setDate(dueDate.getDate() + (i * intervalDays));
+
+        const expense = await tx.expense.create({
+          data: {
+            description: `${data.description} (${i + 1}/${installments})`,
+            amount: installmentAmount,
+            dueDate: dueDate,
+            paidAt: data.paidAt ? new Date(data.paidAt) : null,
+            status: data.status || "PENDING",
+            category: data.category,
+            isRecurring: data.isRecurring || false,
+            company: { connect: { id: companyId } },
+          },
+        });
+        createdExpenses.push(expense);
       }
-      return Promise.all(promises);
+      return createdExpenses;
     }, { timeout: 20000 });
   }
 
