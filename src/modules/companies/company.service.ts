@@ -10,8 +10,8 @@ import { prisma } from "../../lib/prisma.js";
 export async function createCompany(data: CreateCompanyInput) {
   return companiesRepository.create({
     name: data.name,
-    desiredProfit: data.desiredProfit || 0, // Legacy support
-    targetProfitValue: 0, // Default 0
+    desiredProfit: data.desiredProfit || 0, // Suporte a legado
+    targetProfitValue: 0, // Padrão 0
   });
 }
 
@@ -35,7 +35,7 @@ export async function updateCompanySettings(
 
   const company = await companiesRepository.update(id, updateData);
 
-  // Convert Decimals to Numbers for the Controller/Frontend
+  // Converte Decimals para Numbers para o Controller/Frontend
   const monthlyFixedCost = Number(company.monthlyFixedCost);
   const desiredProfit = Number(company.desiredProfit);
 
@@ -49,6 +49,21 @@ export async function updateCompanySettings(
     desiredProfit,
     targetProfitValue: Number(company.targetProfitValue),
     isConfigured,
+  };
+}
+
+export async function getCompanySettings(id: string) {
+  const company = await companiesRepository.findById(id);
+  if (!company) throw new Error("Company not found");
+
+  return {
+    ...company,
+    monthlyFixedCost: Number(company.monthlyFixedCost),
+    defaultTaxRate: Number(company.defaultTaxRate),
+    defaultCardFee: Number(company.defaultCardFee),
+    desiredProfit: Number(company.desiredProfit),
+    targetProfitValue: Number(company.targetProfitValue),
+    isConfigured: Number(company.monthlyFixedCost) > 0 && Number(company.desiredProfit) > 0
   };
 }
 
@@ -68,12 +83,12 @@ export async function calculateSalesTarget(companyId: string) {
   let totalContributionMargin = 0;
   let totalSalePrice = 0;
 
-  // Calculate Average Contribution Margin Ratio
+  // Calcula a taxa média da Margem de Contribuição
   if (products.length > 0) {
     for (const p of products) {
       const sale = Number(p.salePrice);
       const cost = Number(p.costPrice);
-      // Variable Cost = Cost + (Sale * Tax) + (Sale * CardFee)
+      // Custo Variável = Custo + (Venda * Imposto) + (Venda * Taxa Cartão)
       const variableCost = cost + (sale * taxRate) + (sale * cardFee);
       const contribution = sale - variableCost;
       const marginRatio = sale > 0 ? contribution / sale : 0;
@@ -83,16 +98,16 @@ export async function calculateSalesTarget(companyId: string) {
     }
   }
 
-  const avgContributionMargin = products.length > 0 ? totalContributionMargin / products.length : 0.5; // Default 50%
+  const avgContributionMargin = products.length > 0 ? totalContributionMargin / products.length : 0.5; // Padrão 50%
   const avgTicket = products.length > 0 ? totalSalePrice / products.length : 0;
 
-  // Date Logic for Current Month
+  // Lógica de data para o mês atual
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  // Fetch Expenses Sum grouped by Category for the current month
-  // We fetch ALL expenses (Paid + Pending) to calculate the full monthly target
+  // Busca soma das despesas agrupadas por categoria para o mês atual
+  // Buscamos TODAS as despesas (Pagas + Pendentes) para calcular a meta mensal total
   const expensesAggregations = await prisma.expense.groupBy({
     by: ['category'],
     where: {
@@ -117,23 +132,12 @@ export async function calculateSalesTarget(companyId: string) {
   const detailedFixedCost = expenseMap.get('FIXED') || 0;
   const variableCost = expenseMap.get('VARIABLE') || 0;
   
-  // Note: If there are other categories (DEBT, TAX, INVESTMENT), they are not explicitly requested 
-  // in the breakdown, but for the Total Target (totalNeeds), we should probably include them 
-  // if we want to cover *all* costs. 
-  // However, the prompt specifically asked for "variableExpenses" and defined it as "Sum of expenses VARIABLE".
-  // And defined Total Fixed as "Generic + Fixed Expenses".
-  // To be safe and compliant with "RequiredRevenue = TotalFixed + Variable + Profit", 
-  // I will use detailedFixedCost and variableCost as defined.
-  // If we want to capture ALL other expenses as "Variable" in the broad sense, we could sum everything not FIXED.
-  // Given the strict instruction "variableCost: number // Soma das expenses VARIABLE", I will stick to the category.
+  // Nota: De acordo com a instrução estrita, 'variableCost' é a soma das despesas marcadas como VARIÁVEL.
+  // Outras categorias não são incluídas explicitamente neste cálculo de custo variável simplificado.
   
   const totalFixedCost = monthlyFixedCost + detailedFixedCost;
 
-  // Formula: RequiredRevenue * CM = FixedCosts + Expenses + ProfitTarget
-  // RequiredRevenue = (Fixed + Expenses + ProfitTarget) / CM
-  
-  // Per instructions: target uses (totalFixedCost + variableExpenses + targetProfitValue)
-  // variableExpenses here maps to variableCost
+  // Fórmula: Receita Necessária = (Fixos + Despesas Variáveis + Lucro Alvo) / Margem de Contribuição
   const totalNeeds = totalFixedCost + variableCost + targetProfitValue;
 
   let totalToSell = 0;
@@ -144,7 +148,7 @@ export async function calculateSalesTarget(companyId: string) {
   return {
     totalToSell: Number(totalToSell.toFixed(2)),
     dailyTarget: Number((totalToSell / 30).toFixed(2)),
-    monthlyTarget: Number(totalToSell.toFixed(2)), // Added monthlyTarget as per example
+    monthlyTarget: Number(totalToSell.toFixed(2)),
     avgProductQty: avgTicket > 0 ? Math.ceil(totalToSell / avgTicket) : 0,
     breakDown: {
       genericFixedCost: monthlyFixedCost,
@@ -154,7 +158,7 @@ export async function calculateSalesTarget(companyId: string) {
       targetProfit: targetProfitValue,
     },
     metrics: {
-      expensesSum: detailedFixedCost + variableCost, // Keeping a sum for reference, though deprecated in new structure
+      expensesSum: detailedFixedCost + variableCost, // Mantendo soma para referência
       monthlyFixedCost,
       targetProfitValue,
       avgContributionMargin: Number(avgContributionMargin.toFixed(2)),

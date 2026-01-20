@@ -25,6 +25,8 @@ app.register(cors, {
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
   ],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 })
 
 app.register(fastifyJwt, {
@@ -59,7 +61,7 @@ app.register(fastifySwagger, {
       },
     },
   },
-  transform: jsonSchemaTransform, // This is crucial for Zod to OpenAI checks
+  transform: jsonSchemaTransform, // Crucial para validações do Zod
 });
 
 app.register(fastifyApiReference, {

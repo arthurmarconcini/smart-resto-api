@@ -33,4 +33,14 @@ export async function updateSettings(req: FastifyRequest<{ Body: { monthlyFixedC
     }
 }
 
+export async function getSettings(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const company = await companiesService.getCompanySettings(req.companyId!);
+        return reply.send(company);
+    } catch (error) {
+        console.error(error);
+        return reply.code(500).send({ error: "Failed to fetch company settings" });
+    }
+}
+
 

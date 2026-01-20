@@ -10,11 +10,8 @@ import { z } from "zod";
 export async function companiesRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
-  // Public wrapper for create company? Or require auth? 
-  // Usually createCompany is public for signup, but we have auth/signup.
-  // Existing route: POST /
-  // If we want to secure "targets" and "settings", we must use middleware.
-
+  // Rota existente: POST /
+  
   server.post(
     "/",
     {
@@ -25,7 +22,7 @@ export async function companiesRoutes(app: FastifyInstance) {
     companiesController.createCompany
   );
 
-  // Authenticated routes
+  // Rotas autenticadas
   server.register(async (protectedRoutes) => {
     protectedRoutes.addHook("preHandler", authMiddleware);
 
@@ -37,14 +34,14 @@ export async function companiesRoutes(app: FastifyInstance) {
             monthlyFixedCost: z.number().min(0).optional(),
             defaultTaxRate: z.number().min(0).max(100).optional(),
             defaultCardFee: z.number().min(0).max(100).optional(),
-            desiredProfit: z.number().min(0).max(1000).optional(), // Margin per product
-            targetProfitValue: z.number().min(0).optional(), // Monthly target
+            desiredProfit: z.number().min(0).max(1000).optional(), // Margem por produto
+            targetProfitValue: z.number().min(0).optional(), // Meta mensal
           }),
           response: {
             200: z.object({
               id: z.string(),
               name: z.string(),
-              // Monetary/Percent fields returned as standard Numbers for Frontend
+              // Campos monetários/percentuais retornados como números padrão para o Frontend
               monthlyFixedCost: z.number(),
               defaultTaxRate: z.number(),
               defaultCardFee: z.number(),
@@ -58,6 +55,29 @@ export async function companiesRoutes(app: FastifyInstance) {
         },
       },
       companiesController.updateSettings
+    );
+
+    protectedRoutes.get(
+      "/settings",
+      {
+        schema: {
+          response: {
+            200: z.object({
+              id: z.string(),
+              name: z.string(),
+              monthlyFixedCost: z.number(),
+              defaultTaxRate: z.number(),
+              defaultCardFee: z.number(),
+              desiredProfit: z.number(),
+              targetProfitValue: z.number(),
+              isConfigured: z.boolean(),
+              createdAt: z.date(),
+              updatedAt: z.date(),
+            }),
+          },
+        },
+      },
+      companiesController.getSettings
     );
 
     protectedRoutes.get("/targets", companiesController.getSalesTarget);
