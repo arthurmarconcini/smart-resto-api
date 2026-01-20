@@ -3,8 +3,9 @@ import * as companiesRepository from "./company.repository.js";
 import type { CreateCompanyInput } from "./company.schemas.js";
 
 import * as productsRepository from "../products/products.repository.js";
-import * as financeService from "../finance/finance.service.js";
+
 import { Prisma } from "@prisma/client";
+import { prisma } from "../../lib/prisma.js";
 
 export async function createCompany(data: CreateCompanyInput) {
   return companiesRepository.create({
@@ -85,25 +86,75 @@ export async function calculateSalesTarget(companyId: string) {
   const avgContributionMargin = products.length > 0 ? totalContributionMargin / products.length : 0.5; // Default 50%
   const avgTicket = products.length > 0 ? totalSalePrice / products.length : 0;
 
-  // Expenses (Sum of all pending/paid expenses for the month to be covered)
-  const expensesSum = await financeService.getMonthlyExpenses(companyId);
+  // Date Logic for Current Month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Fetch Expenses Sum grouped by Category for the current month
+  // We fetch ALL expenses (Paid + Pending) to calculate the full monthly target
+  const expensesAggregations = await prisma.expense.groupBy({
+    by: ['category'],
+    where: {
+      companyId,
+      dueDate: {
+        gte: startOfMonth,
+        lte: endOfMonth,
+      },
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  const expenseMap = new Map<string, number>();
+  expensesAggregations.forEach(e => {
+    if (e.category) {
+      expenseMap.set(e.category, Number(e._sum.amount || 0));
+    }
+  });
+
+  const detailedFixedCost = expenseMap.get('FIXED') || 0;
+  const variableCost = expenseMap.get('VARIABLE') || 0;
+  
+  // Note: If there are other categories (DEBT, TAX, INVESTMENT), they are not explicitly requested 
+  // in the breakdown, but for the Total Target (totalNeeds), we should probably include them 
+  // if we want to cover *all* costs. 
+  // However, the prompt specifically asked for "variableExpenses" and defined it as "Sum of expenses VARIABLE".
+  // And defined Total Fixed as "Generic + Fixed Expenses".
+  // To be safe and compliant with "RequiredRevenue = TotalFixed + Variable + Profit", 
+  // I will use detailedFixedCost and variableCost as defined.
+  // If we want to capture ALL other expenses as "Variable" in the broad sense, we could sum everything not FIXED.
+  // Given the strict instruction "variableCost: number // Soma das expenses VARIABLE", I will stick to the category.
+  
+  const totalFixedCost = monthlyFixedCost + detailedFixedCost;
 
   // Formula: RequiredRevenue * CM = FixedCosts + Expenses + ProfitTarget
   // RequiredRevenue = (Fixed + Expenses + ProfitTarget) / CM
+  
+  // Per instructions: target uses (totalFixedCost + variableExpenses + targetProfitValue)
+  // variableExpenses here maps to variableCost
+  const totalNeeds = totalFixedCost + variableCost + targetProfitValue;
 
   let totalToSell = 0;
-
   if (avgContributionMargin > 0) {
-    const totalNeeds = monthlyFixedCost + expensesSum + targetProfitValue;
     totalToSell = totalNeeds / avgContributionMargin;
   }
 
   return {
     totalToSell: Number(totalToSell.toFixed(2)),
     dailyTarget: Number((totalToSell / 30).toFixed(2)),
+    monthlyTarget: Number(totalToSell.toFixed(2)), // Added monthlyTarget as per example
     avgProductQty: avgTicket > 0 ? Math.ceil(totalToSell / avgTicket) : 0,
+    breakDown: {
+      genericFixedCost: monthlyFixedCost,
+      detailedFixedCost: Number(detailedFixedCost.toFixed(2)),
+      totalFixedCost: Number(totalFixedCost.toFixed(2)),
+      variableCost: Number(variableCost.toFixed(2)),
+      targetProfit: targetProfitValue,
+    },
     metrics: {
-      expensesSum,
+      expensesSum: detailedFixedCost + variableCost, // Keeping a sum for reference, though deprecated in new structure
       monthlyFixedCost,
       targetProfitValue,
       avgContributionMargin: Number(avgContributionMargin.toFixed(2)),

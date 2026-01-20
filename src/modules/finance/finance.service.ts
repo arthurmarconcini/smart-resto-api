@@ -107,10 +107,21 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
   );
 
   // Sum pending expenses
-  const variableExpenses = pendingExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  let pendingFixed = 0;
+  let pendingVariable = 0;
+
+  for (const e of pendingExpenses) {
+    const amount = Number(e.amount);
+    if (e.category === 'FIXED') {
+      pendingFixed += amount;
+    } else {
+      pendingVariable += amount; 
+    }
+  }
 
   // 3. Calculate Totals
-  const totalNeeds = monthlyFixedCost + variableExpenses; // Break-even (Fixed + Pending Debts)
+  const hybridFixedCost = monthlyFixedCost + pendingFixed;
+  const totalNeeds = hybridFixedCost + pendingVariable; // Break-even (Fixed + Pending Debts)
   const targetRevenue = totalNeeds + targetProfitValue; // Goal (Break-even + Profit)
 
   // 4. Daily Breakdown
@@ -133,8 +144,8 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
 
   return {
     summary: {
-      fixedCost: monthlyFixedCost,
-      variableExpenses: variableExpenses,
+      fixedCost: hybridFixedCost,
+      variableExpenses: pendingVariable,
       totalDebts: totalNeeds, // As per prompt "Custo total" is implied as Needs? 
       // Prompt says: "totalDebts": 7500 which was 5000+2500. So yes.
       targetProfit: targetProfitValue,
