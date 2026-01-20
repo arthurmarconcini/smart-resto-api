@@ -89,7 +89,7 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
   const targetMonth = month || now.getMonth() + 1;
   const targetYear = year || now.getFullYear();
 
-  // 1. Get Company details for Fixed Costs & Target Profit
+  // 1. Busca detalhes da Empresa para Custos Fixos e Lucro Alvo
   const company = await prisma.company.findUnique({
     where: { id: companyId },
   });
@@ -97,63 +97,65 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
   if (!company) throw new Error("Company not found");
 
   const monthlyFixedCost = Number(company.monthlyFixedCost);
-  const targetProfitValue = Number(company.targetProfitValue); // Explicit field from Company model
+  const targetProfitValue = Number(company.targetProfitValue);
 
-  // 2. Get Pending Expenses for the month
-  const pendingExpenses = await financeRepository.findPendingExpensesInMonth(
-    companyId,
-    targetMonth,
-    targetYear
+  // 2. Agrega TODAS as despesas (Pagas + Pendentes) para o mês
+  const expensesAggregations = await financeRepository.aggregateExpensesByMonth(
+      companyId,
+      targetMonth,
+      targetYear
   );
 
-  // Sum pending expenses
-  let pendingFixed = 0;
-  let pendingVariable = 0;
-
-  for (const e of pendingExpenses) {
-    const amount = Number(e.amount);
-    if (e.category === 'FIXED') {
-      pendingFixed += amount;
-    } else {
-      pendingVariable += amount; 
+  const expenseMap = new Map<string, number>();
+  expensesAggregations.forEach(e => {
+    if (e.category) {
+      expenseMap.set(e.category, Number(e._sum.amount || 0));
     }
-  }
+  });
 
-  // 3. Calculate Totals
-  const hybridFixedCost = monthlyFixedCost + pendingFixed;
-  const totalNeeds = hybridFixedCost + pendingVariable; // Break-even (Fixed + Pending Debts)
-  const targetRevenue = totalNeeds + targetProfitValue; // Goal (Break-even + Profit)
+  const detailedFixedCost = expenseMap.get('FIXED') || 0;
+  const variableCost = expenseMap.get('VARIABLE') || 0;
 
-  // 4. Daily Breakdown
-  // Calculate remaining days in the month (if current month) OR total days if future
-  // If we are in the target month/year:
-  const isCurrentMonth = targetMonth === (now.getMonth() + 1) && targetYear === now.getFullYear();
+  // 3. Calcula Totais (Modelo Híbrido)
+  // Custo Fixo Híbrido = Fixo da Empresa + Despesas marcadas como FIXED
+  const hybridFixedCost = monthlyFixedCost + detailedFixedCost;
   
+  // Necessidade Total (Ponto de Equilíbrio) = Custos Fixos + Despesas Variáveis (sem lucro ainda)
+  const totalNeeds = hybridFixedCost + variableCost; 
+  
+  // Receita Meta = Necessidade Total + Lucro Alvo
+  const targetRevenue = totalNeeds + targetProfitValue;
+
+  // 4. Detalhamento Diário
+  const isCurrentMonth = targetMonth === (now.getMonth() + 1) && targetYear === now.getFullYear();
   const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
   let remainingDays = daysInMonth;
 
   if (isCurrentMonth) {
     const currentDay = now.getDate();
-    remainingDays = Math.max(1, daysInMonth - currentDay); // Avoid 0 or negative if at end of month
+    remainingDays = Math.max(1, daysInMonth - currentDay);
   }
-  
-  // If target is in the past, maybe daily target is irrelevant? 
-  // But logic says "days remaining". If full month (future), it's daysInMonth.
-  
+
   const dailyTarget = targetRevenue / remainingDays;
 
   return {
-    summary: {
-      fixedCost: hybridFixedCost,
-      variableExpenses: pendingVariable,
-      totalDebts: totalNeeds, // As per prompt "Custo total" is implied as Needs? 
-      // Prompt says: "totalDebts": 7500 which was 5000+2500. So yes.
+    breakDown: {
+      genericFixedCost: monthlyFixedCost,
+      detailedFixedCost: Number(detailedFixedCost.toFixed(2)),
+      totalFixedCost: Number(hybridFixedCost.toFixed(2)),
+      variableExpenses: Number(variableCost.toFixed(2)),
       targetProfit: targetProfitValue,
     },
     targets: {
-      breakEvenRevenue: totalNeeds,
-      goalRevenue: targetRevenue,
-      dailyTarget: Math.round(dailyTarget * 100) / 100, // Round to 2 decimals
+      breakEvenRevenue: Number(totalNeeds.toFixed(2)),
+      goalRevenue: Number(targetRevenue.toFixed(2)),
+      dailyTarget: Number(dailyTarget.toFixed(2)),
     },
+    summary: { // Deprecado mas mantido para compatibilidade se necessário
+      fixedCost: Number(hybridFixedCost.toFixed(2)),
+      variableExpenses: Number(variableCost.toFixed(2)),
+      totalDebts: Number(totalNeeds.toFixed(2)),
+      targetProfit: targetProfitValue,
+    }
   };
 }

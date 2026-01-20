@@ -42,11 +42,10 @@ export async function sumUnpaidExpenses(companyId: string, month: number, year: 
   const expenses = await prisma.expense.findMany({
     where: {
       companyId,
-      // Logic for sum: 
-      // 1. One-time expenses in this month range (dueDate)
-      // 2. OR Recurring expenses (dueDate day match? Or just any recurring expense?)
-      // Simplification: Standard recurring expense logic usually means it hits every month.
-      // For this MVP, we will sum ALL recurring expenses + any one-time expense in this month due date.
+      // Lógica de soma:
+      // 1. Despesas pontuais nesta faixa de mês (vencimento)
+      // 2. OU despesas recorrentes (simplificação: assume-se que ocorre todo mês)
+      // Para este MVP, somamos TODAS as recorrentes + pontuais no mês.
       OR: [
         {
           isRecurring: true,
@@ -82,6 +81,31 @@ export async function findPendingExpensesInMonth(companyId: string, month: numbe
           },
         },
       ],
+    },
+  });
+}
+
+export async function aggregateExpensesByMonth(companyId: string, month: number, year: number) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0); 
+  endDate.setHours(23, 59, 59, 999);
+
+  return prisma.expense.groupBy({
+    by: ['category'],
+    where: {
+      companyId,
+      OR: [
+        { isRecurring: true },
+        {
+          dueDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      ],
+    },
+    _sum: {
+      amount: true,
     },
   });
 }
