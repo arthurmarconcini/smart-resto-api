@@ -46,17 +46,10 @@ export async function sumUnpaidExpenses(companyId: string, month: number, year: 
       // 1. Despesas pontuais nesta faixa de mês (vencimento)
       // 2. OU despesas recorrentes (simplificação: assume-se que ocorre todo mês)
       // Para este MVP, somamos TODAS as recorrentes + pontuais no mês.
-      OR: [
-        {
-          isRecurring: true,
-        },
-        {
-          dueDate: {
-            gte: startDate,
-            lte: endDate,
-          }
-        }
-      ]
+      dueDate: {
+        gte: startDate,
+        lte: endDate,
+      }
     },
   });
 
@@ -72,15 +65,10 @@ export async function findPendingExpensesInMonth(companyId: string, month: numbe
     where: {
       companyId,
       status: "PENDING",
-      OR: [
-        { isRecurring: true },
-        {
-          dueDate: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      ],
+      dueDate: {
+        gte: startDate,
+        lte: endDate,
+      },
     },
   });
 }
@@ -94,18 +82,29 @@ export async function aggregateExpensesByMonth(companyId: string, month: number,
     by: ['category'],
     where: {
       companyId,
-      OR: [
-        { isRecurring: true },
-        {
-          dueDate: {
-            gte: startDate,
-            lte: endDate,
-          },
-        },
-      ],
+      dueDate: {
+        gte: startDate,
+        lte: endDate,
+      },
     },
     _sum: {
       amount: true,
+    },
+  });
+}
+
+export async function findExpensesInMonth(companyId: string, month: number, year: number) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0);
+  endDate.setHours(23, 59, 59, 999);
+
+  return prisma.expense.findMany({
+    where: {
+      companyId,
+      dueDate: {
+        gte: startDate,
+        lte: endDate,
+      },
     },
   });
 }

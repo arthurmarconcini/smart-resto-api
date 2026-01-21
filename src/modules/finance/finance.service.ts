@@ -100,31 +100,28 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
   const targetProfitValue = Number(company.targetProfitValue);
 
   // 2. Agrega TODAS as despesas (Pagas + Pendentes) para o mês
-  const expensesAggregations = await financeRepository.aggregateExpensesByMonth(
+  const expenses = await financeRepository.findExpensesInMonth(
       companyId,
       targetMonth,
       targetYear
   );
 
-  const expenseMap = new Map<string, number>();
-  expensesAggregations.forEach(e => {
-    if (e.category) {
-      expenseMap.set(e.category, Number(e._sum.amount || 0));
+  let detailedFixedCost = 0;
+  let variableExpenses = 0;
+
+  for (const expense of expenses) {
+    const amount = Number(expense.amount);
+    if (expense.category === "FIXED") {
+      detailedFixedCost += amount;
+    } else {
+      variableExpenses += amount;
     }
-  });
+  }
 
-  const detailedFixedCost = expenseMap.get('FIXED') || 0;
-  const variableCost = expenseMap.get('VARIABLE') || 0;
-
-  // 3. Calcula Totais (Modelo Híbrido)
-  // Custo Fixo Híbrido = Fixo da Empresa + Despesas marcadas como FIXED
-  const hybridFixedCost = monthlyFixedCost + detailedFixedCost;
-  
-  // Necessidade Total (Ponto de Equilíbrio) = Custos Fixos + Despesas Variáveis (sem lucro ainda)
-  const totalNeeds = hybridFixedCost + variableCost; 
-  
-  // Receita Meta = Necessidade Total + Lucro Alvo
-  const targetRevenue = totalNeeds + targetProfitValue;
+  // 3. Calcula Totais
+  const totalFixedCost = monthlyFixedCost + detailedFixedCost;
+  const breakEvenRevenue = totalFixedCost + variableExpenses;
+  const goalRevenue = totalFixedCost + variableExpenses + targetProfitValue;
 
   // 4. Detalhamento Diário
   const isCurrentMonth = targetMonth === (now.getMonth() + 1) && targetYear === now.getFullYear();
@@ -136,26 +133,27 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
     remainingDays = Math.max(1, daysInMonth - currentDay);
   }
 
-  const dailyTarget = targetRevenue / remainingDays;
+  const dailyTarget = goalRevenue / remainingDays;
 
   return {
     breakDown: {
-      genericFixedCost: monthlyFixedCost,
-      detailedFixedCost: Number(detailedFixedCost.toFixed(2)),
-      totalFixedCost: Number(hybridFixedCost.toFixed(2)),
-      variableExpenses: Number(variableCost.toFixed(2)),
-      targetProfit: targetProfitValue,
+      genericFixedCost: Number(monthlyFixedCost),
+      detailedFixedCost: Number(detailedFixedCost),
+      totalFixedCost: Number(totalFixedCost),
+      variableExpenses: Number(variableExpenses),
+      targetProfit: Number(targetProfitValue)
     },
     targets: {
-      breakEvenRevenue: Number(totalNeeds.toFixed(2)),
-      goalRevenue: Number(targetRevenue.toFixed(2)),
-      dailyTarget: Number(dailyTarget.toFixed(2)),
+      breakEvenRevenue: Number(breakEvenRevenue),
+      goalRevenue: Number(goalRevenue),
+      dailyTarget: Number(dailyTarget)
     },
-    summary: { // Deprecado mas mantido para compatibilidade se necessário
-      fixedCost: Number(hybridFixedCost.toFixed(2)),
-      variableExpenses: Number(variableCost.toFixed(2)),
-      totalDebts: Number(totalNeeds.toFixed(2)),
-      targetProfit: targetProfitValue,
+    // Mantendo summary para retrocompatibilidade se necessário, mas com valores corrigidos
+    summary: {
+      fixedCost: Number(totalFixedCost),
+      variableExpenses: Number(variableExpenses),
+      totalDebts: Number(breakEvenRevenue),
+      targetProfit: Number(targetProfitValue)
     }
   };
 }
