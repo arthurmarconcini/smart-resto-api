@@ -111,7 +111,8 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
 
   for (const expense of expenses) {
     const amount = Number(expense.amount);
-    if (expense.category === "FIXED") {
+
+    if (expense.category === "FIXED" && expense.status === "PAID") {
       detailedFixedCost += amount;
     } else {
       variableExpenses += amount;
