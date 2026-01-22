@@ -56,4 +56,17 @@ export async function financeRoutes(app: FastifyInstance) {
     },
     financeController.deleteExpense
   );
+
+  server.patch(
+    "/expenses/:id/pay",
+    {
+        schema: {
+            params: expenseIdParamSchema,
+            body: z.object({
+                paidAt: z.iso.datetime().optional()
+            })
+        }
+    },
+    financeController.payExpense
+  );
 }

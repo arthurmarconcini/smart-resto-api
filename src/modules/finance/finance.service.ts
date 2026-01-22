@@ -76,6 +76,16 @@ export async function deleteExpense(id: string, companyId: string) {
   return financeRepository.deleteExpense(id, companyId);
 }
 
+export async function payExpense(id: string, companyId: string, paidAt?: string) {
+  const expense = await financeRepository.findById(id, companyId);
+  if (!expense) throw new Error("Expense not found");
+
+  return financeRepository.update(id, companyId, {
+    status: "PAID",
+    paidAt: paidAt ? new Date(paidAt) : new Date(),
+  });
+}
+
 export async function getMonthlyExpenses(companyId: string, month?: number, year?: number) {
   const now = new Date();
   const targetMonth = month || now.getMonth() + 1;

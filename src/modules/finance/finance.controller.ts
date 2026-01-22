@@ -56,3 +56,16 @@ export async function getFinancialForecast(req: FastifyRequest<{ Querystring: { 
         return reply.code(500).send({ error: "Failed to get financial forecast" });
     }
 }
+
+export async function payExpense(req: FastifyRequest<{ Params: { id: string }; Body: { paidAt?: string } }>, reply: FastifyReply) {
+    try {
+        const expense = await financeService.payExpense(req.params.id, req.companyId!, req.body.paidAt);
+        return reply.send(expense);
+    } catch (error) {
+        console.error(error);
+        if (error instanceof Error && error.message === "Expense not found") {
+            return reply.code(404).send({ error: "Expense not found" });
+        }
+        return reply.code(500).send({ error: "Failed to pay expense" });
+    }
+}
