@@ -1,13 +1,13 @@
 
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
-import { ZodError } from "zod";
+import z, { ZodError } from "zod";
 import { AppError } from "../errors/AppError.js";
 
 export function errorHandler(error: FastifyError, request: FastifyRequest, reply: FastifyReply) {
   if (error instanceof ZodError) {
     return reply.status(400).send({
       message: "Validation Error",
-      issues: error.format(),
+      issues: z.treeifyError(error),
     });
   }
 

@@ -1,4 +1,3 @@
-
 import { prisma } from "../../lib/prisma.js";
 import { hash, compare } from "bcryptjs";
 import type { SignUpInput, SignInInput } from "./auth.schemas.js";
@@ -55,8 +54,12 @@ export async function signUp(data: SignUpInput) {
 export async function signIn(data: SignInInput) {
   const { email, password } = data;
 
+  // CORREÇÃO 1: Adicionado include: { company: true }
   const user = await prisma.user.findUnique({
     where: { email },
+    include: {
+      company: true, 
+    },
   });
 
   if (!user) {
@@ -69,11 +72,13 @@ export async function signIn(data: SignInInput) {
     throw new Error("Invalid credentials");
   }
 
+  // CORREÇÃO 2: Retornar o objeto company completo
   return { 
     id: user.id, 
     name: user.name, 
     email: user.email, 
-    companyId: user.companyId 
+    companyId: user.companyId,
+    company: user.company // <--- O Frontend precisa disso aqui para preencher os inputs!
   };
 }
 
@@ -89,15 +94,13 @@ export async function getMe(userId: string) {
     throw new Error("User not found");
   }
 
+  // CORREÇÃO 3: Retornar a company inteira, não apenas id e name
   return {
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
     },
-    company: {
-      id: user.company.id,
-      name: user.company.name,
-    },
+    company: user.company, // <--- Devolve tudo (taxas, custos, metas)
   };
 }

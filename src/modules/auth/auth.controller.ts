@@ -37,7 +37,11 @@ export async function signIn(req: FastifyRequest<{ Body: SignInInput }>, reply: 
       companyId: user.companyId,
     });
 
-    return reply.send({ token });
+    return reply.send({ 
+      token,
+      user: user
+    });
+
   } catch (error) {
     if (error instanceof Error && error.message === "Invalid credentials") {
         throw new AppError("Invalid credentials", 401);
