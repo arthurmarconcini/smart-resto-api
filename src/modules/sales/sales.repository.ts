@@ -3,7 +3,10 @@ import { AppError } from "../../errors/AppError.js";
 import type { CreateSaleInput } from "./sales.schemas.js";
 import { Prisma } from "@prisma/client";
 
-export async function createItemizedSale(data: CreateSaleInput, companyId: string) {
+export async function createItemizedSale(
+  data: CreateSaleInput,
+  companyId: string,
+) {
   return await prisma.$transaction(async (tx) => {
     if (!data.items || data.items.length === 0) {
       throw new AppError("Items are required for detailed sales");
@@ -23,7 +26,7 @@ export async function createItemizedSale(data: CreateSaleInput, companyId: strin
 
       if (product.stock.toNumber() < item.quantity) {
         throw new AppError(
-          `Insufficient stock for product ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
+          `Insufficient stock for product ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
         );
       }
 
@@ -65,35 +68,88 @@ export async function createItemizedSale(data: CreateSaleInput, companyId: strin
       },
     });
 
+    // Atualizar MonthlyRevenue automaticamente
+    const saleDate = new Date(sale.date);
+    const month = saleDate.getMonth() + 1;
+    const year = saleDate.getFullYear();
+
+    await tx.monthlyRevenue.upsert({
+      where: {
+        month_year_companyId: { month, year, companyId },
+      },
+      create: {
+        month,
+        year,
+        companyId,
+        totalRevenue: sale.totalAmount,
+      },
+      update: {
+        totalRevenue: {
+          increment: sale.totalAmount,
+        },
+      },
+    });
+
     return sale;
   });
 }
 
-export async function createDailyTotalSale(data: CreateSaleInput, companyId: string) {
+export async function createDailyTotalSale(
+  data: CreateSaleInput,
+  companyId: string,
+) {
   return await prisma.$transaction(async (tx) => {
-      // Lógica dentro da transação para consistência com venda itemizada
-      
-      if (!data.totalAmount || data.totalAmount <= 0) {
-          throw new AppError("Total amount is required and must be positive for daily total sales");
-      }
+    // Lógica dentro da transação para consistência com venda itemizada
 
-      const sale = await tx.sale.create({
-          data: {
-              companyId,
-              date: data.date,
-              totalAmount: data.totalAmount,
-              type: "DAILY_TOTAL",
-          },
-          include: {
-              items: true,
-          },
-      });
+    if (!data.totalAmount || data.totalAmount <= 0) {
+      throw new AppError(
+        "Total amount is required and must be positive for daily total sales",
+      );
+    }
 
-      return sale;
+    const sale = await tx.sale.create({
+      data: {
+        companyId,
+        date: data.date,
+        totalAmount: data.totalAmount,
+        type: "DAILY_TOTAL",
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    // Atualizar MonthlyRevenue automaticamente
+    const saleDate = new Date(sale.date);
+    const month = saleDate.getMonth() + 1;
+    const year = saleDate.getFullYear();
+
+    await tx.monthlyRevenue.upsert({
+      where: {
+        month_year_companyId: { month, year, companyId },
+      },
+      create: {
+        month,
+        year,
+        companyId,
+        totalRevenue: sale.totalAmount,
+      },
+      update: {
+        totalRevenue: {
+          increment: sale.totalAmount,
+        },
+      },
+    });
+
+    return sale;
   });
 }
 
-export async function findAll(companyId: string, month?: number, year?: number) {
+export async function findAll(
+  companyId: string,
+  month?: number,
+  year?: number,
+) {
   const where: Prisma.SaleWhereInput = {
     companyId,
   };
