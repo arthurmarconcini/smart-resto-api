@@ -36,6 +36,7 @@ export async function companiesRoutes(app: FastifyInstance) {
             defaultCardFee: z.number().min(0).max(100).optional(),
             desiredProfit: z.number().min(0).max(1000).optional(), // Margem por produto
             targetProfitValue: z.number().min(0).optional(), // Meta mensal
+            manualEmployeeCostEnabled: z.boolean().optional(),
           }),
           response: {
             200: z.object({
@@ -47,6 +48,8 @@ export async function companiesRoutes(app: FastifyInstance) {
               defaultCardFee: z.number(),
               desiredProfit: z.number(),
               targetProfitValue: z.number(),
+              manualEmployeeCostEnabled: z.boolean(),
+              totalEmployeeCost: z.number(),
               isConfigured: z.boolean(),
               createdAt: z.date(),
               updatedAt: z.date(),
@@ -70,6 +73,8 @@ export async function companiesRoutes(app: FastifyInstance) {
               defaultCardFee: z.number(),
               desiredProfit: z.number(),
               targetProfitValue: z.number(),
+              manualEmployeeCostEnabled: z.boolean(),
+              totalEmployeeCost: z.number(),
               isConfigured: z.boolean(),
               createdAt: z.date(),
               updatedAt: z.date(),
