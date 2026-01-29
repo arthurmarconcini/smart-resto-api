@@ -1,6 +1,7 @@
 
 import * as financeRepository from "./finance.repository.js";
 import type { CreateExpenseInput, UpdateExpenseInput } from "./finance.schemas.js";
+import * as employeeCostService from "../employee-costs/employee-cost.service.js";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../lib/prisma.js";
@@ -129,8 +130,13 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
     }
   }
 
+  let totalEmployeeCost = 0;
+  if (company.manualEmployeeCostEnabled) {
+      totalEmployeeCost = await employeeCostService.calculateTotalEmployeeCost(companyId);
+  }
+
   // 3. Calcula Totais
-  const totalFixedCost = monthlyFixedCost + detailedFixedCost;
+  const totalFixedCost = monthlyFixedCost + detailedFixedCost + totalEmployeeCost;
   const breakEvenRevenue = totalFixedCost + variableExpenses;
   const goalRevenue = totalFixedCost + variableExpenses + targetProfitValue;
 
@@ -150,6 +156,7 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
     breakDown: {
       genericFixedCost: Number(monthlyFixedCost),
       detailedFixedCost: Number(detailedFixedCost),
+      totalEmployeeCost: Number(totalEmployeeCost),
       totalFixedCost: Number(totalFixedCost),
       variableExpenses: Number(variableExpenses),
       targetProfit: Number(targetProfitValue)

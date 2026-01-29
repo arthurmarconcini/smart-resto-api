@@ -3,6 +3,7 @@ import * as companiesRepository from "./company.repository.js";
 import type { CreateCompanyInput } from "./company.schemas.js";
 
 import * as productsRepository from "../products/products.repository.js";
+import * as employeeCostService from "../employee-costs/employee-cost.service.js";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
@@ -12,6 +13,7 @@ export async function createCompany(data: CreateCompanyInput) {
     name: data.name,
     desiredProfit: data.desiredProfit || 0, // Suporte a legado
     targetProfitValue: 0, // Padrão 0
+    manualEmployeeCostEnabled: false,
   });
 }
 
@@ -23,6 +25,7 @@ export async function updateCompanySettings(
     defaultCardFee?: number;
     desiredProfit?: number;
     targetProfitValue?: number;
+    manualEmployeeCostEnabled?: boolean;
   }
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,6 +35,7 @@ export async function updateCompanySettings(
   if (data.defaultCardFee !== undefined) updateData.defaultCardFee = data.defaultCardFee;
   if (data.desiredProfit !== undefined) updateData.desiredProfit = data.desiredProfit;
   if (data.targetProfitValue !== undefined) updateData.targetProfitValue = data.targetProfitValue;
+  if (data.manualEmployeeCostEnabled !== undefined) updateData.manualEmployeeCostEnabled = data.manualEmployeeCostEnabled;
 
   const company = await companiesRepository.update(id, updateData);
 
@@ -39,7 +43,19 @@ export async function updateCompanySettings(
   const monthlyFixedCost = Number(company.monthlyFixedCost);
   const desiredProfit = Number(company.desiredProfit);
 
-  const isConfigured = monthlyFixedCost > 0 && desiredProfit > 0;
+  let totalEmployeeCost = 0;
+  let effectiveFixedCost = monthlyFixedCost;
+
+  if (company.manualEmployeeCostEnabled) {
+      totalEmployeeCost = await employeeCostService.calculateTotalEmployeeCost(id);
+      // Se manualEmployeeCostEnabled for true, o monthlyFixedCost continua sendo o "genérico"
+      // mas o total pode ser composto se quisermos. 
+      // O requisito diz: totalFixedCost = genericFixedCost + variableExpensesTotal + totalEmployeeCost
+      // Aqui estamos calculando apenas o settings de retorno, então vamos retornar os valores crus 
+      // e deixar o cálculo total para o endpoint de forecast ou onde precisar.
+  }
+
+  const isConfigured = (monthlyFixedCost > 0 || totalEmployeeCost > 0) && desiredProfit > 0;
 
   return {
     ...company,
@@ -48,6 +64,8 @@ export async function updateCompanySettings(
     defaultCardFee: Number(company.defaultCardFee),
     desiredProfit,
     targetProfitValue: Number(company.targetProfitValue),
+    manualEmployeeCostEnabled: company.manualEmployeeCostEnabled,
+    totalEmployeeCost,
     isConfigured,
   };
 }
@@ -55,6 +73,11 @@ export async function updateCompanySettings(
 export async function getCompanySettings(id: string) {
   const company = await companiesRepository.findById(id);
   if (!company) throw new Error("Company not found");
+  
+  let totalEmployeeCost = 0;
+  if (company.manualEmployeeCostEnabled) {
+      totalEmployeeCost = await employeeCostService.calculateTotalEmployeeCost(id);
+  }
 
   return {
     ...company,
@@ -63,7 +86,9 @@ export async function getCompanySettings(id: string) {
     defaultCardFee: Number(company.defaultCardFee),
     desiredProfit: Number(company.desiredProfit),
     targetProfitValue: Number(company.targetProfitValue),
-    isConfigured: Number(company.monthlyFixedCost) > 0 && Number(company.desiredProfit) > 0
+    manualEmployeeCostEnabled: company.manualEmployeeCostEnabled,
+    totalEmployeeCost,
+    isConfigured: (Number(company.monthlyFixedCost) > 0 || totalEmployeeCost > 0) && Number(company.desiredProfit) > 0
   };
 }
 
@@ -132,10 +157,13 @@ export async function calculateSalesTarget(companyId: string) {
   const detailedFixedCost = expenseMap.get('FIXED') || 0;
   const variableCost = expenseMap.get('VARIABLE') || 0;
   
-  // Nota: De acordo com a instrução estrita, 'variableCost' é a soma das despesas marcadas como VARIÁVEL.
-  // Outras categorias não são incluídas explicitamente neste cálculo de custo variável simplificado.
+  let totalEmployeeCost = 0;
+  if (company.manualEmployeeCostEnabled) {
+      totalEmployeeCost = await employeeCostService.calculateTotalEmployeeCost(companyId);
+  }
   
-  const totalFixedCost = monthlyFixedCost + detailedFixedCost;
+  // totalFixedCost = genericFixedCost + variableExpensesTotal (interpreted as detailedFixedCost) + totalEmployeeCost
+  const totalFixedCost = monthlyFixedCost + detailedFixedCost + totalEmployeeCost;
 
   // Fórmula: Receita Necessária = (Fixos + Despesas Variáveis + Lucro Alvo) / Margem de Contribuição
   const totalNeeds = totalFixedCost + variableCost + targetProfitValue;
@@ -153,6 +181,7 @@ export async function calculateSalesTarget(companyId: string) {
     breakDown: {
       genericFixedCost: monthlyFixedCost,
       detailedFixedCost: Number(detailedFixedCost.toFixed(2)),
+      totalEmployeeCost: Number(totalEmployeeCost.toFixed(2)),
       totalFixedCost: Number(totalFixedCost.toFixed(2)),
       variableCost: Number(variableCost.toFixed(2)),
       targetProfit: targetProfitValue,
