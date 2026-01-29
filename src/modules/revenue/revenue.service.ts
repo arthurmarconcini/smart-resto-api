@@ -2,6 +2,7 @@
 import * as revenueRepository from "./revenue.repository.js";
 import type { CreateRevenueInput, UpdateRevenueInput } from "./revenue.schemas.js";
 import { Prisma } from "@prisma/client";
+import { prisma } from "../../lib/prisma.js";
 
 export async function createRevenue(data: CreateRevenueInput, companyId: string) {
   const existing = await revenueRepository.findByMonthYear(companyId, data.month, data.year);
@@ -51,8 +52,6 @@ export async function recalculateMonthRevenue(
   month: number,
   year: number
 ) {
-  // Importar prisma localmente para evitar dependência circular
-  const { prisma } = await import("../../lib/prisma.js");
 
   // Definir intervalo do mês
   const startDate = new Date(year, month - 1, 1);
@@ -92,20 +91,47 @@ export async function recalculateMonthRevenue(
 }
 
 /**
- * Busca a receita do mês atual
+ * Busca a receita do mês atual calculando em tempo real a partir das vendas
  */
 export async function getCurrentMonthRevenue(companyId: string) {
+  
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
-  const revenue = await revenueRepository.findByMonthYear(companyId, month, year);
+  // Definir intervalo do mês atual
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+  // Agregar vendas do mês atual em tempo real
+  const salesAggregate = await prisma.sale.aggregate({
+    where: {
+      companyId,
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    _sum: {
+      totalAmount: true,
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  const totalRevenue = Number(salesAggregate._sum.totalAmount ?? 0);
+  const salesCount = salesAggregate._count.id;
+
+  // Buscar registro consolidado (se existir)
+  const consolidatedRevenue = await revenueRepository.findByMonthYear(companyId, month, year);
 
   return {
     month,
     year,
-    totalRevenue: revenue ? Number(revenue.totalRevenue) : 0,
-    exists: !!revenue,
+    totalRevenue,
+    salesCount,
+    consolidatedRevenue: consolidatedRevenue ? Number(consolidatedRevenue.totalRevenue) : null,
   };
 }
 
