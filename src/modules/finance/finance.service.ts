@@ -1,10 +1,24 @@
 
 import * as financeRepository from "./finance.repository.js";
 import type { CreateExpenseInput, UpdateExpenseInput } from "./finance.schemas.js";
-import * as employeeCostService from "../employee-costs/employee-cost.service.js";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../lib/prisma.js";
+
+interface EmployeeBreakdownItem {
+  id: string;
+  name: string;
+  role: string;
+  workedDays: number;
+  dailyRate: number;
+  monthlyCost: number;
+}
+
+interface FixedCostsBreakdown {
+  manualCosts: number;
+  employeeCosts: number;
+  employees: EmployeeBreakdownItem[];
+}
 
 export async function createExpense(data: CreateExpenseInput, companyId: string) {
   const installments = data.installments ?? 1;
@@ -95,6 +109,47 @@ export async function getMonthlyExpenses(companyId: string, month?: number, year
   return financeRepository.sumUnpaidExpenses(companyId, targetMonth, targetYear);
 }
 
+async function calculateTotalFixedCosts(
+  companyId: string,
+  manualEmployeeCostEnabled: boolean,
+  monthlyFixedCost: number
+): Promise<{ total: number; breakdown: FixedCostsBreakdown }> {
+  let employeeCostsTotal = 0;
+  let employees: EmployeeBreakdownItem[] = [];
+
+  if (manualEmployeeCostEnabled) {
+    // Busca e calcula custos de funcionários
+    const employeeCostRecords = await financeRepository.getEmployeeCostsByCompany(companyId);
+    
+    employees = employeeCostRecords.map(emp => {
+      const dailyRate = Number(emp.dailyRate);
+      const monthlyCost = dailyRate * emp.workedDays;
+      
+      return {
+        id: emp.id,
+        name: emp.name,
+        role: emp.role,
+        workedDays: emp.workedDays,
+        dailyRate: dailyRate,
+        monthlyCost: monthlyCost
+      };
+    });
+
+    employeeCostsTotal = employees.reduce((sum, emp) => sum + emp.monthlyCost, 0);
+  }
+
+  const manualCosts = manualEmployeeCostEnabled ? 0 : monthlyFixedCost;
+
+  return {
+    total: manualCosts + employeeCostsTotal,
+    breakdown: {
+      manualCosts,
+      employeeCosts: employeeCostsTotal,
+      employees
+    }
+  };
+}
+
 export async function getFinancialForecast(companyId: string, month?: number, year?: number) {
   const now = new Date();
   const targetMonth = month || now.getMonth() + 1;
@@ -110,7 +165,14 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
   const monthlyFixedCost = Number(company.monthlyFixedCost);
   const targetProfitValue = Number(company.targetProfitValue);
 
-  // 2. Agrega TODAS as despesas (Pagas + Pendentes) para o mês
+  // 2. Calcula custos fixos com breakdown detalhado
+  const fixedCostsData = await calculateTotalFixedCosts(
+    companyId,
+    company.manualEmployeeCostEnabled,
+    monthlyFixedCost
+  );
+
+  // 3. Agrega TODAS as despesas (Pagas + Pendentes) para o mês
   const expenses = await financeRepository.findExpensesInMonth(
       companyId,
       targetMonth,
@@ -130,17 +192,13 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
     }
   }
 
-  let totalEmployeeCost = 0;
-  if (company.manualEmployeeCostEnabled) {
-      totalEmployeeCost = await employeeCostService.calculateTotalEmployeeCost(companyId);
-  }
-
-  // 3. Calcula Totais
-  const totalFixedCost = monthlyFixedCost + detailedFixedCost + totalEmployeeCost;
+  // 4. Calcula Totais
+  const totalEmployeeCost = fixedCostsData.breakdown.employeeCosts;
+  const totalFixedCost = fixedCostsData.total + detailedFixedCost;
   const breakEvenRevenue = totalFixedCost + variableExpenses;
   const goalRevenue = totalFixedCost + variableExpenses + targetProfitValue;
 
-  // 4. Detalhamento Diário
+  // 5. Detalhamento Diário
   const isCurrentMonth = targetMonth === (now.getMonth() + 1) && targetYear === now.getFullYear();
   const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
   let remainingDays = daysInMonth;
@@ -154,19 +212,21 @@ export async function getFinancialForecast(companyId: string, month?: number, ye
 
   return {
     breakDown: {
-      genericFixedCost: Number(monthlyFixedCost),
+      genericFixedCost: fixedCostsData.breakdown.manualCosts,
       detailedFixedCost: Number(detailedFixedCost),
       totalEmployeeCost: Number(totalEmployeeCost),
       totalFixedCost: Number(totalFixedCost),
       variableExpenses: Number(variableExpenses),
       targetProfit: Number(targetProfitValue)
     },
+   
+    fixedCostsBreakdown: fixedCostsData.breakdown,
     targets: {
       breakEvenRevenue: Number(breakEvenRevenue),
       goalRevenue: Number(goalRevenue),
       dailyTarget: Number(dailyTarget)
     },
-    // Mantendo summary para retrocompatibilidade se necessário, mas com valores corrigidos
+   
     summary: {
       fixedCost: Number(totalFixedCost),
       variableExpenses: Number(variableExpenses),

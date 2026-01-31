@@ -104,3 +104,10 @@ export async function findExpensesInMonth(companyId: string, month: number, year
     },
   });
 }
+
+export async function getEmployeeCostsByCompany(companyId: string) {
+  return prisma.employeeCost.findMany({
+    where: { companyId },
+    orderBy: { createdAt: 'desc' }
+  });
+}
