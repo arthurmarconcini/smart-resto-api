@@ -117,8 +117,11 @@ async function calculateTotalFixedCosts(
   let employeeCostsTotal = 0;
   let employees: EmployeeBreakdownItem[] = [];
 
+  // Custo fixo base é SEMPRE incluído
+  const baseCost = monthlyFixedCost;
+
+  // Se modo manual ativado, ADICIONA os custos de funcionários
   if (manualEmployeeCostEnabled) {
-    // Busca e calcula custos de funcionários
     const employeeCostRecords = await financeRepository.getEmployeeCostsByCompany(companyId);
     
     employees = employeeCostRecords.map(emp => {
@@ -138,12 +141,10 @@ async function calculateTotalFixedCosts(
     employeeCostsTotal = employees.reduce((sum, emp) => sum + emp.monthlyCost, 0);
   }
 
-  const manualCosts = manualEmployeeCostEnabled ? 0 : monthlyFixedCost;
-
   return {
-    total: manualCosts + employeeCostsTotal,
+    total: baseCost + employeeCostsTotal,
     breakdown: {
-      manualCosts,
+      manualCosts: baseCost,
       employeeCosts: employeeCostsTotal,
       employees
     }
