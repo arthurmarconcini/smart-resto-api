@@ -116,6 +116,18 @@ model Sale {
   type        SaleType   @default(ITEMIZED)
   createdAt   DateTime   @default(now())
   items       SaleItem[]
+
+  // Campos Anota Aí (opcionais)
+  orderNumber   String?
+  origin        String?
+  paymentMethod String?
+  cardBrand     String?
+  deliveryType  String?
+  freightValue  Decimal?  @default(0)
+  subtotal      Decimal?
+  discount      Decimal?  @default(0)
+
+  @@unique([orderNumber, companyId])
 }
 
 model SaleItem {

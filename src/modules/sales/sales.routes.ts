@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { createSaleHandler, listSalesHandler } from "./sales.controller.js";
+import { createSaleHandler, listSalesHandler, uploadAnotaAiHandler } from "./sales.controller.js";
 import { createSaleSchema } from "./sales.schemas.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -31,5 +31,11 @@ export async function salesRoutes(app: FastifyInstance) {
       },
     },
     listSalesHandler
+  );
+
+  // Upload de relatório Anota Aí (XLSX)
+  server.post(
+    "/upload-anota-ai",
+    uploadAnotaAiHandler
   );
 }

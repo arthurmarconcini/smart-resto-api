@@ -1,6 +1,7 @@
 
 import fastify from 'fastify'
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import { validatorCompiler, serializerCompiler, jsonSchemaTransform } from 'fastify-type-provider-zod'
 import fastifySwagger from '@fastify/swagger';
 import fastifyApiReference from '@scalar/fastify-api-reference';
@@ -32,6 +33,10 @@ app.register(cors, {
 
 app.register(fastifyJwt, {
   secret: process.env.JWT_SECRET || 'supersecret',
+})
+
+app.register(multipart, {
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 })
 
 app.get("/", () => {

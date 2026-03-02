@@ -185,3 +185,71 @@ export async function findAll(
     },
   });
 }
+
+export async function findByOrderNumber(orderNumber: string, companyId: string) {
+  return await prisma.sale.findUnique({
+    where: {
+      orderNumber_companyId: { orderNumber, companyId },
+    },
+  });
+}
+
+export async function createAnotaAiSale(
+  data: {
+    orderNumber: string;
+    origin: string;
+    paymentMethod: string;
+    cardBrand?: string;
+    deliveryType: string;
+    discount: number;
+    freightValue: number;
+    subtotal: number;
+    totalAmount: number;
+    date: Date;
+  },
+  companyId: string,
+) {
+  return await prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.create({
+      data: {
+        companyId,
+        date: data.date,
+        totalAmount: data.totalAmount,
+        type: "DAILY_TOTAL",
+        orderNumber: data.orderNumber,
+        origin: data.origin,
+        paymentMethod: data.paymentMethod,
+        cardBrand: data.cardBrand || null,
+        deliveryType: data.deliveryType,
+        freightValue: data.freightValue,
+        subtotal: data.subtotal,
+        discount: data.discount,
+      },
+    });
+
+    // Atualizar MonthlyRevenue automaticamente
+    const saleDate = new Date(sale.date);
+    const month = saleDate.getMonth() + 1;
+    const year = saleDate.getFullYear();
+
+    await tx.monthlyRevenue.upsert({
+      where: {
+        month_year_companyId: { month, year, companyId },
+      },
+      create: {
+        month,
+        year,
+        companyId,
+        totalRevenue: sale.totalAmount,
+      },
+      update: {
+        totalRevenue: {
+          increment: sale.totalAmount,
+        },
+      },
+    });
+
+    return sale;
+  });
+}
+
