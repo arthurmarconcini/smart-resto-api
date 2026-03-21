@@ -253,3 +253,119 @@ export async function createAnotaAiSale(
   });
 }
 
+export async function findById(id: string, companyId: string) {
+  return await prisma.sale.findUnique({
+    where: { id, companyId },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
+}
+
+export async function updateSale(
+  id: string,
+  companyId: string,
+  data: Prisma.SaleUpdateInput,
+  newItems?: { productId: string; quantity: number }[],
+) {
+  return await prisma.$transaction(async (tx) => {
+    // Se novos items forem enviados, recalcular e substituir
+    if (newItems && newItems.length > 0) {
+      // Reverter estoque dos items antigos
+      const oldItems = await tx.saleItem.findMany({
+        where: { saleId: id },
+      });
+
+      for (const oldItem of oldItems) {
+        await tx.product.update({
+          where: { id: oldItem.productId },
+          data: { stock: { increment: oldItem.quantity } },
+        });
+      }
+
+      // Remover items antigos
+      await tx.saleItem.deleteMany({ where: { saleId: id } });
+
+      // Criar novos items
+      let calculatedTotal = 0;
+      for (const item of newItems) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId, companyId },
+        });
+
+        if (!product) {
+          throw new AppError(`Produto não encontrado: ${item.productId}`);
+        }
+
+        if (product.stock.toNumber() < item.quantity) {
+          throw new AppError(
+            `Estoque insuficiente para ${product.name}. Disponível: ${product.stock}, Solicitado: ${item.quantity}`,
+          );
+        }
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+
+        const unitPrice = product.salePrice.toNumber();
+        const subTotal = item.quantity * unitPrice;
+        calculatedTotal += subTotal;
+
+        await tx.saleItem.create({
+          data: {
+            saleId: id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice,
+            subTotal,
+          },
+        });
+      }
+
+      // Atualizar totalAmount com o novo cálculo
+      data.totalAmount = calculatedTotal;
+    }
+
+    return await tx.sale.update({
+      where: { id, companyId },
+      data,
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+  });
+}
+
+export async function deleteSale(id: string, companyId: string) {
+  return await prisma.$transaction(async (tx) => {
+    // Reverter estoque dos items da venda
+    const items = await tx.saleItem.findMany({
+      where: { saleId: id },
+    });
+
+    for (const item of items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+
+    // Deletar items primeiro (FK constraint)
+    await tx.saleItem.deleteMany({ where: { saleId: id } });
+
+    // Deletar a venda
+    return await tx.sale.delete({
+      where: { id, companyId },
+    });
+  });
+}
+

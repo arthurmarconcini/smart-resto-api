@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import * as salesService from "./sales.service.js";
-import type { CreateSaleInput } from "./sales.schemas.js";
+import type { CreateSaleInput, UpdateSaleInput } from "./sales.schemas.js";
 import { AppError } from "../../errors/AppError.js";
 
 export async function createSaleHandler(
@@ -22,6 +22,26 @@ export async function listSalesHandler(
   const { month, year } = request.query;
   const sales = await salesService.getSales(companyId, month, year);
   return reply.send(sales);
+}
+
+export async function updateSaleHandler(
+  request: FastifyRequest<{ Params: { id: string }; Body: UpdateSaleInput }>,
+  reply: FastifyReply
+) {
+  // @ts-ignore - user é anexado pelo authMiddleware
+  const { companyId } = request.user as { companyId: string };
+  const sale = await salesService.updateSale(request.params.id, companyId, request.body);
+  return reply.send(sale);
+}
+
+export async function deleteSaleHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  // @ts-ignore - user é anexado pelo authMiddleware
+  const { companyId } = request.user as { companyId: string };
+  await salesService.deleteSale(request.params.id, companyId);
+  return reply.status(204).send();
 }
 
 export async function uploadAnotaAiHandler(

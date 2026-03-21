@@ -33,6 +33,30 @@ export const createSaleSchema = z.object({
 
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
 
+export const updateSaleSchema = z.object({
+  date: z.iso.datetime().optional(),
+  type: z.enum(SaleType).optional(),
+  totalAmount: z.number().positive().optional(),
+  items: z.array(z.object({
+    productId: z.uuid(),
+    quantity: z.number().min(0.01),
+  })).optional(),
+  orderNumber: z.string().optional().nullable(),
+  origin: z.string().optional().nullable(),
+  paymentMethod: z.string().optional().nullable(),
+  cardBrand: z.string().optional().nullable(),
+  deliveryType: z.string().optional().nullable(),
+  freightValue: z.number().min(0).optional().nullable(),
+  subtotal: z.number().min(0).optional().nullable(),
+  discount: z.number().min(0).optional().nullable(),
+});
+
+export type UpdateSaleInput = z.infer<typeof updateSaleSchema>;
+
+export const saleIdParamSchema = z.object({
+  id: z.uuid("Invalid Sale ID"),
+});
+
 // Schema para validação de cada linha do XLSX do Anota Aí
 export const anotaAiRowSchema = z.object({
   orderNumber: z.string().min(1, "Número do pedido é obrigatório"),

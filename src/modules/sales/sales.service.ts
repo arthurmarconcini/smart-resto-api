@@ -1,8 +1,9 @@
 import * as XLSX from "xlsx";
 import * as salesRepository from "./sales.repository.js";
 import * as revenueService from "../revenue/revenue.service.js";
-import type { CreateSaleInput, AnotaAiRow } from "./sales.schemas.js";
+import type { CreateSaleInput, UpdateSaleInput, AnotaAiRow } from "./sales.schemas.js";
 import { anotaAiRowSchema, ANOTA_AI_COLUMNS, IGNORED_STATUSES } from "./sales.schemas.js";
+import { AppError } from "../../errors/AppError.js";
 
 function mapSaleToDto(sale: any) {
   return {
@@ -42,6 +43,77 @@ export async function createSale(data: CreateSaleInput, companyId: string) {
 export async function getSales(companyId: string, month?: number, year?: number) {
   const sales = await salesRepository.findAll(companyId, month, year);
   return sales.map(mapSaleToDto);
+}
+
+export async function updateSale(id: string, companyId: string, data: UpdateSaleInput) {
+  const existingSale = await salesRepository.findById(id, companyId);
+  if (!existingSale) {
+    throw new AppError("Venda não encontrada", 404);
+  }
+
+  const oldDate = new Date(existingSale.date);
+
+  // Separar items do restante dos dados para o repository
+  const { items, ...saleFields } = data;
+
+  // Preparar dados para atualização
+  const updateData: Record<string, any> = {};
+  if (saleFields.date !== undefined) updateData.date = saleFields.date;
+  if (saleFields.type !== undefined) updateData.type = saleFields.type;
+  if (saleFields.totalAmount !== undefined) updateData.totalAmount = saleFields.totalAmount;
+  if (saleFields.orderNumber !== undefined) updateData.orderNumber = saleFields.orderNumber;
+  if (saleFields.origin !== undefined) updateData.origin = saleFields.origin;
+  if (saleFields.paymentMethod !== undefined) updateData.paymentMethod = saleFields.paymentMethod;
+  if (saleFields.cardBrand !== undefined) updateData.cardBrand = saleFields.cardBrand;
+  if (saleFields.deliveryType !== undefined) updateData.deliveryType = saleFields.deliveryType;
+  if (saleFields.freightValue !== undefined) updateData.freightValue = saleFields.freightValue;
+  if (saleFields.subtotal !== undefined) updateData.subtotal = saleFields.subtotal;
+  if (saleFields.discount !== undefined) updateData.discount = saleFields.discount;
+
+  const updatedSale = await salesRepository.updateSale(id, companyId, updateData, items);
+
+  // Recalcular MonthlyRevenue do mês antigo
+  await revenueService.recalculateMonthRevenue(
+    companyId,
+    oldDate.getMonth() + 1,
+    oldDate.getFullYear()
+  );
+
+  // Se a data mudou, recalcular também o mês novo
+  if (data.date) {
+    const newDate = new Date(data.date);
+    const isNewMonth =
+      newDate.getMonth() !== oldDate.getMonth() ||
+      newDate.getFullYear() !== oldDate.getFullYear();
+
+    if (isNewMonth) {
+      await revenueService.recalculateMonthRevenue(
+        companyId,
+        newDate.getMonth() + 1,
+        newDate.getFullYear()
+      );
+    }
+  }
+
+  return mapSaleToDto(updatedSale);
+}
+
+export async function deleteSale(id: string, companyId: string) {
+  const existingSale = await salesRepository.findById(id, companyId);
+  if (!existingSale) {
+    throw new AppError("Venda não encontrada", 404);
+  }
+
+  const saleDate = new Date(existingSale.date);
+
+  await salesRepository.deleteSale(id, companyId);
+
+  // Recalcular MonthlyRevenue do mês da venda deletada
+  await revenueService.recalculateMonthRevenue(
+    companyId,
+    saleDate.getMonth() + 1,
+    saleDate.getFullYear()
+  );
 }
 
 // ===== Processamento de Upload Anota Aí =====

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { createSaleHandler, listSalesHandler, uploadAnotaAiHandler } from "./sales.controller.js";
-import { createSaleSchema } from "./sales.schemas.js";
+import { createSaleHandler, listSalesHandler, updateSaleHandler, deleteSaleHandler, uploadAnotaAiHandler } from "./sales.controller.js";
+import { createSaleSchema, updateSaleSchema, saleIdParamSchema } from "./sales.schemas.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -31,6 +31,27 @@ export async function salesRoutes(app: FastifyInstance) {
       },
     },
     listSalesHandler
+  );
+
+  server.put(
+    "/:id",
+    {
+      schema: {
+        params: saleIdParamSchema,
+        body: updateSaleSchema,
+      },
+    },
+    updateSaleHandler
+  );
+
+  server.delete(
+    "/:id",
+    {
+      schema: {
+        params: saleIdParamSchema,
+      },
+    },
+    deleteSaleHandler
   );
 
   // Upload de relatório Anota Aí (XLSX)
