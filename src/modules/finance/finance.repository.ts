@@ -35,16 +35,15 @@ export async function deleteExpense(id: string, companyId: string) {
 }
 
 export async function sumUnpaidExpenses(companyId: string, month: number, year: number) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0); 
-  endDate.setHours(23, 59, 59, 999); // Include full last day
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
 
   const expenses = await prisma.expense.findMany({
     where: {
       companyId,
       dueDate: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       }
     },
   });
@@ -53,9 +52,8 @@ export async function sumUnpaidExpenses(companyId: string, month: number, year: 
 }
 
 export async function findPendingExpensesInMonth(companyId: string, month: number, year: number) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0); 
-  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
 
   return prisma.expense.findMany({
     where: {
@@ -63,16 +61,15 @@ export async function findPendingExpensesInMonth(companyId: string, month: numbe
       status: "PENDING",
       dueDate: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
   });
 }
 
 export async function aggregateExpensesByMonth(companyId: string, month: number, year: number) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0); 
-  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
 
   return prisma.expense.groupBy({
     by: ['category', 'status'],
@@ -80,7 +77,7 @@ export async function aggregateExpensesByMonth(companyId: string, month: number,
       companyId,
       dueDate: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
     _sum: {
@@ -90,16 +87,15 @@ export async function aggregateExpensesByMonth(companyId: string, month: number,
 }
 
 export async function findExpensesInMonth(companyId: string, month: number, year: number) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
-  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
 
   return prisma.expense.findMany({
     where: {
       companyId,
       dueDate: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
   });

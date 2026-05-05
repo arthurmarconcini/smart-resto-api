@@ -156,18 +156,18 @@ export async function findAll(
 
   if (month && year) {
     // Construir intervalo de data
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Último dia do mês
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
     where.date = {
       gte: startDate,
-      lte: endDate,
+      lt: endDate,
     };
   } else if (year) {
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year, 11, 31);
+    const startDate = new Date(Date.UTC(year, 0, 1));
+    const endDate = new Date(Date.UTC(year + 1, 0, 1)); // Primeiro dia do próximo ano (exclusivo)
     where.date = {
       gte: startDate,
-      lte: endDate,
+      lt: endDate,
     };
   }
 

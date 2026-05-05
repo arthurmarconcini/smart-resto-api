@@ -54,8 +54,8 @@ export async function recalculateMonthRevenue(
 ) {
 
   // Definir intervalo do mês
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
 
   // Somar todas as vendas do mês usando agregação
   const result = await prisma.sale.aggregate({
@@ -63,7 +63,7 @@ export async function recalculateMonthRevenue(
       companyId,
       date: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
     _sum: {
@@ -100,8 +100,8 @@ export async function getCurrentMonthRevenue(companyId: string) {
   const year = now.getFullYear();
 
   // Definir intervalo do mês atual
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1)); // Primeiro dia do próximo mês (exclusivo)
 
   // Agregar vendas do mês atual em tempo real
   const salesAggregate = await prisma.sale.aggregate({
@@ -109,7 +109,7 @@ export async function getCurrentMonthRevenue(companyId: string) {
       companyId,
       date: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
     _sum: {
